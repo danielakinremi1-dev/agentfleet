@@ -1,0 +1,22 @@
+# Local development services. The API runs on the host for fast reload (ADR-0002);
+# the worker joins this file in slice 2.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agentfleet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentfleet}
+      POSTGRES_DB: ${POSTGRES_DB:-agentfleet}
+    ports:
+      # Host port 5433 by default so it does not clash with a locally installed PostgreSQL.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  pgdata:
