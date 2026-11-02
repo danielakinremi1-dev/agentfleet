@@ -1,0 +1,28 @@
+# Private owner notes (never commit)
+CLAUDE.local.md
+notes/
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
