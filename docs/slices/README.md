@@ -31,4 +31,5 @@ Known limitations, deferred refactors, and next steps.
 ```
 
 ## Index
-_No slices completed yet._
+1. [Backend scaffold](01-backend-scaffold.md): project tooling, PostgreSQL, first schema,
+   workflow template endpoints, CI.

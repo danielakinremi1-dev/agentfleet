@@ -11,8 +11,8 @@
 
 | Phase | Focus | Status |
 |---|---|---|
-| 0 | Repository and project foundation | Not started |
-| 1 | Database and core backend | Not started |
+| 0 | Repository and project foundation | Done (slice 1), except choosing a license |
+| 1 | Database and core backend | In progress (slice 1: templates, runs, tasks schema; template endpoints) |
 | 2 | Workflow orchestration engine | Not started |
 | 3 | Durable execution and failure recovery | Not started |
 | 4 | AI agents and tool execution | Not started |

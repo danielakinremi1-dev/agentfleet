@@ -82,11 +82,14 @@ TypeScript, Tailwind, React Flow. Rationale: `docs/technology-guide.md` and
   or part of the environment setup script.
 
 ## Commands
-_To be filled in as part of slice 1's definition of done._
-- Run: 
-- Test: 
-- Lint / format / type-check: 
-- Migrate: 
+First time: `cp .env.example .env`. Backend commands run from `backend/`.
+- Start PostgreSQL: `docker compose up -d db` (host port 5433 by default)
+- Install: `uv sync`
+- Run: `uv run alembic upgrade head && uv run uvicorn app.main:app --reload` (OpenAPI docs at `/docs`)
+- Test: `uv run pytest` (needs the database running; creates `agentfleet_test` on first run)
+- Lint / format / type-check: `uv run ruff check . && uv run ruff format --check . && uv run mypy`
+- Migrate: `uv run alembic upgrade head`; new migration: `uv run alembic revision --autogenerate -m "<message>"`
+  (review the generated file by hand); drift check: `uv run alembic check`
 
 ## Security non-negotiables
 - Never give an LLM-controlled agent an unrestricted shell, arbitrary Python execution, or

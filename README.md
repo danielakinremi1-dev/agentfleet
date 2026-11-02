@@ -26,5 +26,26 @@ Early development. Progress is tracked in the table at the top of [`docs/roadmap
 - [Build notes](docs/slices/): a step-by-step record of how each piece was built
 - [Design direction](docs/design/README.md)
 
-_A full README (screenshots, architecture diagram, setup instructions, demo link, limitations) will replace this
-once there is something to run._
+## Local development
+Requirements: Docker, [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 if needed).
+
+```bash
+cp .env.example .env           # local defaults; .env is gitignored
+docker compose up -d db        # PostgreSQL 17 on host port 5433
+cd backend
+uv sync                        # install locked dependencies
+uv run alembic upgrade head    # create the schema
+uv run uvicorn app.main:app --reload
+```
+
+The API is then at http://localhost:8000, with interactive OpenAPI docs at http://localhost:8000/docs.
+
+Checks (the same ones CI runs):
+
+```bash
+uv run ruff check . && uv run ruff format --check . && uv run mypy
+uv run pytest                  # runs against a real PostgreSQL test database
+```
+
+_A full README (screenshots, architecture diagram, demo link, limitations) will replace this once the
+product is further along._
