@@ -1,1 +1,1 @@
-"""Background workers that claim and execute tasks (slice 2)."""
+"""Background workers that claim and execute tasks (Phase 2)."""

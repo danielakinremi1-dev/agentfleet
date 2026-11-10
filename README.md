@@ -16,15 +16,41 @@ AgentFleet is a backend orchestration system built around those problems.
 4. **Evaluation:** replay standardized incidents and measure whether agents find the correct cause.
 
 ## Status
-Early development. Progress is tracked in the table at the top of [`docs/roadmap.md`](docs/roadmap.md).
+Phase 0 of 10 is complete. Next: Phase 1, workflow runs and state machines.
+
+| Capability | Status |
+|---|---|
+| Workflow templates API with validated task graphs | Built |
+| Runs, task dependencies and enforced state machines | Phase 1 (next) |
+| Workers executing tasks with safe concurrent claiming | Phase 2 |
+| Crash recovery, retries and idempotency | Phase 3 |
+| LLM agents with allowlisted tools; incident investigation workflow | Phase 4 |
+| Authentication, workspace isolation, human approval | Phase 5 |
+| Live event stream and operator UI | Phase 6 |
+| Public deployment | Phase 7 |
+| Evaluation harness and performance report | Phases 8-9 |
+
+Scope, order and progress are tracked in [`docs/roadmap.md`](docs/roadmap.md).
+
+## Engineering practices
+- **Protected `main`.** Every change arrives through a pull request that must pass CI: lint, strict type
+  checks, migrations on an empty database, a model/migration drift check, and tests with a coverage gate.
+- **Tests on a real PostgreSQL**, including concurrent requests racing for one row, constraint violations
+  attempted with raw SQL, and transaction rollback.
+- **The database is the last line of defence.** Uniqueness, allowed states and referential integrity are
+  constraints, not conventions in application code.
+- **Decisions are written down.** Each architectural decision has an [ADR](docs/decisions/) with the
+  alternatives considered; core subsystems get a [design doc](docs/design-docs/) before they are built.
+- **A build record.** Every slice of work has a [note](docs/slices/) on what was built, how it works and why.
 
 ## Documentation
-- [Product brief](docs/product-brief.md)
-- [Roadmap](docs/roadmap.md)
-- [Technology guide](docs/technology-guide.md): what each technology is and why it was chosen
-- [Architecture decision records](docs/decisions/)
+- [Architecture overview](docs/architecture/README.md): layers, request flow, data model, guarantees
+- [Roadmap](docs/roadmap.md): phases, slices, exit criteria and progress
+- [Architecture decision records](docs/decisions/) and [design docs](docs/design-docs/)
 - [Build notes](docs/slices/): a step-by-step record of how each piece was built
-- [Design direction](docs/design/README.md)
+- [Technology guide](docs/technology-guide.md): what each technology is and why it was chosen
+- [Contributing and delivery workflow](CONTRIBUTING.md) and [changelog](CHANGELOG.md)
+- [Product brief](docs/product-brief.md) and [UI design direction](docs/ui-design/README.md)
 
 ## Local development
 Requirements: Docker, [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 if needed) and GNU Make.

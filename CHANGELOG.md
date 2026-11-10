@@ -5,6 +5,10 @@ Each completed roadmap phase is a release (see [CONTRIBUTING.md](CONTRIBUTING.md
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-10
+
+Phase 0: foundation.
+
 ### Added
 - Backend project scaffold: uv project, FastAPI application factory, typed settings, async SQLAlchemy
   engine and per-request sessions.
@@ -21,3 +25,4 @@ Each completed roadmap phase is a release (see [CONTRIBUTING.md](CONTRIBUTING.md
 - Branch coverage measurement with a 90% gate in CI.
 - Pull request template, Dependabot configuration, contributing guide and this changelog.
 - Branch protection on `main`: pull requests and a passing CI check are required.
+- Roadmap restructured into phased slices with exit criteria; architecture overview; design-doc process.

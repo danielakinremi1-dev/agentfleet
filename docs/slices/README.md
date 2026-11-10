@@ -35,3 +35,5 @@ Known limitations, deferred refactors, and next steps.
    workflow template endpoints, CI.
 2. [Delivery workflow](02-delivery-workflow.md): Makefile, coverage gate, protected `main`,
    PR template, changelog, Dependabot.
+3. [Roadmap restructure](03-roadmap-restructure.md): phased plan with exit criteria, architecture
+   overview, design-doc process.

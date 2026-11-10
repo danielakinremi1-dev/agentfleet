@@ -7,8 +7,8 @@ Every subsystem should be demoable live and explainable from first principles, a
 engineering decision should be recorded with its rationale.
 
 Before starting a task, read `docs/roadmap.md` and the latest file in `docs/slices/`.
-Consult `docs/product-brief.md`, `docs/technology-guide.md` and `docs/decisions/` when relevant
-to the task. If a `CLAUDE.local.md` exists, follow it as well.
+Consult `docs/architecture/README.md`, `docs/design-docs/`, `docs/decisions/`,
+`docs/technology-guide.md` and `docs/product-brief.md` when relevant to the task. If a `CLAUDE.local.md` exists, follow it as well.
 
 ## Development process
 1. **Work in small slices** (about 2-4 hours each). Branch per slice: `slice/<n>-<name>`.
@@ -28,6 +28,14 @@ to the task. If a `CLAUDE.local.md` exists, follow it as well.
 4. **Review honestly.** Flag risks, scope creep and weak spots in proposed designs.
 5. **Prefer readable over clever.** No large unexplained generated modules. If something is hard
    to explain, simplify it. Code comments explain *why*, not *what*.
+6. **Follow the roadmap's structure.** Take the next unchecked slice in `docs/roadmap.md`; tick a
+   step when its commit lands. When a phase starts, write its step checklists and confirm its
+   start-of-phase summary. When a phase ends, fill in its end-of-phase review, rewrite "Where the
+   project stands", update `docs/architecture/README.md` and the README status, and cut the
+   changelog section. Tagging the release happens after the owner merges.
+7. **Design before building core subsystems.** State machines, scheduling and claiming, leases and
+   retries, idempotency, agent execution, auth and event delivery start with a design doc in
+   `docs/design-docs/` (template in its README), reviewed in the same PR as the first code.
 
 ## Documentation duties
 The docs are a step-by-step record of how the system was built and why.
@@ -39,6 +47,11 @@ The docs are a step-by-step record of how the system was built and why.
   (what it is, why it was chosen, alternatives, where it is used, trade-offs).
 - **`docs/decisions/`**: an ADR for every architectural decision (schema design, job claiming,
   retry policy, auth model, event delivery, and so on). Number sequentially.
+- **`docs/design-docs/`**: a design doc per core subsystem, written before it is built: problem,
+  design, failure modes, alternatives, test plan.
+- **`docs/architecture/README.md`**: the living overview of how the system works today. Update it
+  at the end of each phase (diagrams, guarantees table, process view).
+- **`CHANGELOG.md`**: user-visible changes under `Unreleased`; one section per phase release.
 - **Voice:** professional engineering documentation. State what was chosen and why, with
   alternatives and trade-offs, in a confident, neutral tone. Not tutorial voice, not first-person
   narration. Unresolved items go under "Follow-ups".
@@ -104,13 +117,16 @@ All commands are Makefile targets run from the repository root (`make help` list
 - Enforce authorization on the backend, including per-workspace data isolation.
 
 ## Scope guard
-- P0: end-to-end incident workflow, persistent state, scheduling and dependencies, agent
-  execution, basic retry/recovery, execution history, working frontend, tests, deployment.
-- P1: concurrent workers, worker recovery, checkpoints, idempotency, human approval,
-  tool permissions, traces, evaluation framework.
-- P2: analytics, model comparisons, benchmarks, advanced editor.
-- Do not start P2 while P0 is unfinished. Out of scope: agent marketplace, arbitrary user code
-  execution, Kubernetes, multi-region, billing, custom models.
+- P0: workflow core, execution engine and durable execution (concurrent workers, leases, retries,
+  idempotent submission); persisted execution history; the incident workflow end to end on the
+  fake provider with allowlisted tools; runs list and live run detail UI; public deployment; tests
+  including failure injection; docs.
+- P1: authentication, workspaces and roles; human approval; audit log; a real provider adapter;
+  traces and metrics; evaluation harness; a focused benchmark report.
+- P2: workflow builder UI, analytics page, model comparison reports, distributed tracing.
+- Do not start P2 while P0 is unfinished. Phases 1-3 are never cut; the cut order for the rest is in
+  `docs/roadmap.md`. Out of scope: agent marketplace, arbitrary user code execution, Kubernetes,
+  multi-region, billing, custom models.
 
 ## Current status
 See the Progress table in `docs/roadmap.md` and the latest file in `docs/slices/`.
