@@ -106,8 +106,11 @@ Entries are added as technologies are introduced. Status is `planned` until a sl
 ## GitHub Actions
 - **What:** CI.
 - **Why chosen:** runs lint, type checks, tests and migration checks on every PR.
-- **Where used:** `.github/workflows/ci.yml`: a PostgreSQL service container, `uv sync --locked`, ruff, mypy,
-  `alembic upgrade head`, `alembic check`, pytest.
+- **Where used:** `.github/workflows/ci.yml`: a PostgreSQL service container, then one Makefile target per
+  step (install, lint, format check, type check, migrate, drift check, tests with a coverage gate). The
+  `backend` job is a required status check on `main` (ADR-0006).
+- **Trade-offs:** tied to GitHub. The steps are Makefile targets, so moving to another CI system means
+  rewriting the wrapper, not the checks.
 - **Status:** in use (slice 1; expanded in Phase 9)
 
 ## pydantic-settings
@@ -134,6 +137,35 @@ Entries are added as technologies are introduced. Status is `planned` until a sl
 - **Where used:** `backend/tests/` (`asyncio_mode = "auto"`, function-scoped event loops).
 - **Trade-offs:** connections must not be shared across event loops, so engines are created per test (ADR-0005).
 - **Status:** in use (slice 1)
+
+## GNU Make
+- **What:** a task runner; the `Makefile` at the repository root gives each developer task a short name.
+- **Why chosen:** one command interface for people and for CI (`make check` runs what the pipeline runs),
+  preinstalled on Linux and macOS, and familiar to most engineers.
+- **Alternatives:** `just` or `poe` (clearer syntax, another tool to install); shell scripts (no shared
+  help listing or target dependencies); documenting raw commands (CI and docs drift apart).
+- **Where used:** `Makefile`; called by `.github/workflows/ci.yml`.
+- **Trade-offs:** Make syntax is unforgiving (tabs, `$$` escaping), so targets are kept to one or two lines.
+- **Status:** in use (slice 2)
+
+## pytest-cov (coverage.py)
+- **What:** measures which lines and branches of `app/` the tests execute.
+- **Why chosen:** shows untested code paths and lets CI fail when coverage drops below a threshold (90%).
+- **Alternatives:** no measurement (gaps go unnoticed); a 100% requirement (rewards tests written for the number).
+- **Where used:** `make coverage`, configured under `[tool.coverage]` in `backend/pyproject.toml`.
+  The `greenlet` concurrency setting is required because SQLAlchemy's async layer runs driver calls in greenlets.
+- **Trade-offs:** executed is not the same as verified; a line can be covered by a test that asserts nothing
+  about it. Coverage complements the failure-injection and constraint tests, it does not replace them.
+- **Status:** in use (slice 2)
+
+## Dependabot
+- **What:** GitHub's dependency update service; opens pull requests when new versions are published.
+- **Why chosen:** keeps dependencies and CI actions current with no manual tracking, and every update is
+  verified by the full pipeline before it can merge.
+- **Alternatives:** Renovate (more configurable, more setup); manual updates (tend not to happen).
+- **Where used:** `.github/dependabot.yml`: monthly, one grouped PR for Python packages and one for GitHub Actions.
+- **Trade-offs:** adds PRs to review; grouping and a monthly schedule keep that to two a month.
+- **Status:** in use (slice 2)
 
 ## Planned later (decided when reached)
 Server-Sent Events vs WebSockets for live updates (Phase 6), Redis for pub/sub if needed, React +

@@ -33,3 +33,5 @@ Known limitations, deferred refactors, and next steps.
 ## Index
 1. [Backend scaffold](01-backend-scaffold.md): project tooling, PostgreSQL, first schema,
    workflow template endpoints, CI.
+2. [Delivery workflow](02-delivery-workflow.md): Makefile, coverage gate, protected `main`,
+   PR template, changelog, Dependabot.
