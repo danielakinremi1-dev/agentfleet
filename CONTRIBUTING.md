@@ -18,6 +18,8 @@ How changes move from an idea to `main`. The reasoning behind these rules is rec
 | **Slice** | About 2-4 hours of work | One pull request and one slice note in `docs/slices/` |
 | **Step** | One checkbox in the roadmap | One commit |
 
+Core subsystems start with a design doc ([`docs/design-docs/`](docs/design-docs/)) before code is written.
+
 ## Local setup
 Requirements: Docker, [uv](https://docs.astral.sh/uv/) and GNU Make.
 
@@ -88,7 +90,9 @@ for the finished project.
 |---|---|
 | A slice is finished | Slice note in `docs/slices/` |
 | An architectural decision is made | ADR in `docs/decisions/` |
+| A core subsystem is about to be built | Design doc in `docs/design-docs/` |
 | A tool or library is introduced | Entry in `docs/technology-guide.md` |
+| A phase is finished | Architecture overview in `docs/architecture/` and the end-of-phase review in the roadmap |
 | Anything user-visible changes | `CHANGELOG.md` |
 | A step, slice or phase is completed | Checkbox and Progress table in `docs/roadmap.md` |
 
