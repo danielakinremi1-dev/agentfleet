@@ -77,6 +77,22 @@ async def test_invalid_payload_is_rejected(client: AsyncClient, mutate: Any) -> 
     assert response.status_code == 422
 
 
+async def test_cyclic_template_is_rejected_and_names_the_cycle(client: AsyncClient) -> None:
+    payload = template_payload()
+    payload["definition"]["tasks"] = [
+        {"key": "gather", "name": "Gather", "depends_on": ["report"]},
+        {"key": "analyze", "name": "Analyze", "depends_on": ["gather"]},
+        {"key": "report", "name": "Report", "depends_on": ["analyze"]},
+    ]
+    response = await client.post("/api/workflows", json=payload)
+
+    assert response.status_code == 422
+    # The author of the template needs to know which tasks to fix, not only that it is invalid.
+    assert "dependency cycle: gather -> report -> analyze -> gather" in response.text
+    # Rejected before the service ran: nothing was stored.
+    assert (await client.get("/api/workflows")).json() == []
+
+
 async def test_unknown_template_is_404(client: AsyncClient) -> None:
     response = await client.get(f"/api/workflows/{uuid.uuid4()}")
     assert response.status_code == 404

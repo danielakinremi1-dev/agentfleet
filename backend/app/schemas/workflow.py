@@ -4,6 +4,8 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from app.orchestration.dag import topological_order
+
 # Task keys are referenced by `depends_on` and later by task rows, so keep them simple identifiers.
 TaskKey = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$", max_length=100)]
 
@@ -21,8 +23,8 @@ class TaskDefinition(BaseModel):
 class WorkflowDefinition(BaseModel):
     """The task graph of a template.
 
-    Validates structure only: unique keys and dependencies that point at known tasks.
-    Cycle detection is added with the dependency graph module (Phase 1).
+    Valid when task keys are unique, every dependency names a known task exactly once, and
+    the graph has no cycle, so at least one order exists in which the tasks can run.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -40,11 +42,16 @@ class WorkflowDefinition(BaseModel):
         for task in self.tasks:
             if task.key in task.depends_on:
                 raise ValueError(f"task '{task.key}' depends on itself")
+            if len(set(task.depends_on)) != len(task.depends_on):
+                raise ValueError(f"task '{task.key}' lists the same dependency more than once")
             unknown = sorted(set(task.depends_on) - known)
             if unknown:
                 raise ValueError(
                     f"task '{task.key}' depends on unknown tasks: {', '.join(unknown)}"
                 )
+
+        # Raises CycleError, a ValueError, which Pydantic reports as a validation error (422).
+        topological_order({task.key: task.depends_on for task in self.tasks})
         return self
 
 
