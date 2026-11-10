@@ -5,6 +5,9 @@ Each completed roadmap phase is a release (see [CONTRIBUTING.md](CONTRIBUTING.md
 
 ## [Unreleased]
 
+### Added
+- MIT license.
+
 ## [0.1.0] - 2026-11-10
 
 Phase 0: foundation.

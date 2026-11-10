@@ -71,5 +71,8 @@ make help     # list all commands
 Changes reach `main` only through pull requests that pass CI. The workflow is described in
 [CONTRIBUTING.md](CONTRIBUTING.md), and releases are listed in [CHANGELOG.md](CHANGELOG.md).
 
+## License
+[MIT](LICENSE)
+
 _A full README (screenshots, architecture diagram, demo link, limitations) will replace this once the
 product is further along._

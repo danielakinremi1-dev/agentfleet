@@ -18,7 +18,7 @@ suite run against a real database. Workflows cannot be executed yet; that work s
 
 | Phase | Focus | Release | Status |
 |---|---|---|---|
-| 0 | Foundation | v0.1.0 | Done (license choice pending) |
+| 0 | Foundation | v0.1.0 | Done |
 | 1 | Workflow core: runs and state machines | v0.2.0 | Not started |
 | 2 | Execution engine | v0.3.0 | Not started |
 | 3 | Durable execution | v0.4.0 | Not started |
@@ -112,7 +112,7 @@ The plan contains about 45 slices.
   protected `main`, PR template, changelog, Dependabot.
 - [x] **Roadmap restructure** ([slice note](slices/03-roadmap-restructure.md), PR #3): this plan, the
   architecture overview and the design-doc process.
-- [ ] **License** chosen and added (owner decision).
+- [x] **License:** MIT, added after the `v0.1.0` tag (PR #5).
 
 **Exit criteria**
 - [x] The application starts locally with documented commands.

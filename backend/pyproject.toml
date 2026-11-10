@@ -2,6 +2,7 @@
 name = "agentfleet-backend"
 description = "AgentFleet API, orchestration engine and workers"
 version = "0.1.0"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.1",
