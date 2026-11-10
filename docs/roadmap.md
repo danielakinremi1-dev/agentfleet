@@ -1,1381 +1,556 @@
-# AgentFleet — Complete Project Roadmap
+# AgentFleet roadmap
 
-**Project type:** Backend-heavy AI application / developer tooling  
-**Primary language:** Python  
-**Primary goal:** Demonstrate professional backend engineering, independent problem-solving, AI agent orchestration, and end-to-end product development.  
-**Secondary goal:** Deliver a visually distinctive, interactive application that is compelling to explore and demonstrate.
+The single source of truth for scope, order and progress.
 
-> **Project decision:** AgentFleet starts from a clean repository (no starter template).
+- Why the plan has this shape: [ADR-0007](decisions/0007-roadmap-restructure.md)
+- How work is delivered (branches, pull requests, checks, releases): [CONTRIBUTING.md](../CONTRIBUTING.md)
+- How the system works today: [architecture overview](architecture/README.md)
+
+## Where the project stands
+_Rewritten at the end of every phase._
+
+**Phase 0 is complete.** The repository contains a tested FastAPI service backed by PostgreSQL, with
+versioned schema migrations and endpoints to create and read workflow templates. Every change reaches
+`main` through a pull request that must pass lint, strict type checks, migration checks and a test
+suite run against a real database. Workflows cannot be executed yet; that work starts in Phase 1.
 
 ## Progress
 
-| Phase | Focus | Status |
+| Phase | Focus | Release | Status |
+|---|---|---|---|
+| 0 | Foundation | v0.1.0 | Done (license choice pending) |
+| 1 | Workflow core: runs and state machines | v0.2.0 | Not started |
+| 2 | Execution engine | v0.3.0 | Not started |
+| 3 | Durable execution | v0.4.0 | Not started |
+| 4 | Agents and tools | v0.5.0 | Not started |
+| 5 | Security and human approval | v0.6.0 | Not started |
+| 6 | Live observability and operator UI | v0.7.0 | Not started |
+| 7 | Deployment and public demo | v0.8.0 | Not started |
+| 8 | Evaluation | v0.9.0 | Not started |
+| 9 | Performance | v0.10.0 | Not started |
+| 10 | Presentation | v1.0.0 | Not started |
+
+---
+
+## What is being built
+
+AgentFleet runs multi-step AI workflows reliably. A workflow is a graph of tasks; tasks are executed
+by workers, survive crashes and restarts, are retried safely, and leave a complete record of what
+happened. The first application is incident investigation: specialized agents gather evidence with
+controlled tools, analyze it, challenge the diagnosis and produce an evidence-backed report, pausing
+for human approval before any consequential action.
+
+The engineering objective is the orchestration backend: durable execution, safe concurrency, failure
+recovery, observability and security. Incident investigation is the use case that exercises it.
+
+**Primary demonstration.** Submit an incident, watch agents run concurrently, see a worker crash and
+the run recover without repeating finished work, approve a proposed remediation, read the report,
+and inspect the full trace with cost and timing.
+
+**Not in scope.** An agent marketplace, arbitrary user code execution, a general visual programming
+language, Kubernetes, multiple regions, billing, custom models, autonomous production remediation.
+
+## Priorities
+
+| Priority | Meaning | Contents |
 |---|---|---|
-| 0 | Repository and project foundation | Done (slices 1-2), except choosing a license |
-| 1 | Database and core backend | In progress (slice 1: templates, runs, tasks schema; template endpoints) |
-| 2 | Workflow orchestration engine | Not started |
-| 3 | Durable execution and failure recovery | Not started |
-| 4 | AI agents and tool execution | Not started |
-| 5 | Human approval and security | Not started |
-| 6 | Observability and real-time frontend | Not started |
-| 7 | Evaluation and quality measurement | Not started |
-| 8 | Performance and scalability | Not started |
-| 9 | Docker, CI/CD and deployment | Not started |
-| 10 | Portfolio presentation | Not started |
+| **P0** | The project is incomplete without it | Workflow core, execution engine and durable execution, including concurrent workers, leases, retries and idempotent submission (Phases 1-3). Persisted execution history. The incident workflow end to end on the deterministic fake provider with allowlisted tools (Phase 4). Runs list and live run detail in the UI (Phase 6). Public deployment (Phase 7). Tests, including failure injection, and documentation throughout. |
+| **P1** | Major differentiators | Authentication, workspaces and roles; human approval; audit log (Phase 5). A real LLM provider adapter. Traces and metrics. Evaluation harness (Phase 8). A focused benchmark report (Phase 9). |
+| **P2** | Polish | Workflow builder UI, analytics page, model comparison reports, distributed tracing, scheduling beyond concurrency limits. |
+
+P2 does not start while P0 is unfinished. A public deployment requires at least the authentication
+and quota work from Phase 5.
+
+**If time runs short, cut in this order:** Phase 9 to a single claim-throughput benchmark; Phase 8 to
+three scenarios with no comparison report; Phase 6 to the run detail view only; Phase 5 to
+single-workspace token authentication with approvals kept. Phases 1-3 are not cut.
+
+## How the plan is delivered
+
+| Unit | Size | Ends with |
+|---|---|---|
+| Phase | One capability of the system | End-of-phase review, changelog section, release tag |
+| Slice | About 2-4 hours | One pull request and one slice note in [`slices/`](slices/) |
+| Step | One checkbox below | One commit |
+
+- **Every phase is bracketed by two summaries.** The start-of-phase summary states the objective, why it
+  comes now, what can be demonstrated at the end and which concepts it introduces. The end-of-phase
+  review records what was delivered, the evidence, the decisions taken, deviations from the plan and
+  follow-ups. Phase 0 below is the worked example.
+- **Detail is added one phase ahead.** The next two phases list their steps. Later phases list slices
+  only; their steps are written when the phase starts, using what earlier phases taught.
+- **Core subsystems are designed before they are built.** The first step of the relevant slice is a
+  design doc in [`design-docs/`](design-docs/). Single decisions are recorded as ADRs in [`decisions/`](decisions/).
+- **Each phase closes with the project presentable:** README status, demo commands and changelog are
+  updated as part of the phase, not deferred to Phase 10.
+
+**Presentation checkpoints.** Points at which the project stands on its own:
+
+| Checkpoint | After | What can be shown |
+|---|---|---|
+| A | Phase 3 | A durable execution engine: crash-recovery demo from a fresh clone, the failure-injection suite, and the design docs behind it |
+| B | Phase 7 | A public link where an investigation can be launched and watched live |
+| C | Phase 10 | The complete project with evaluation results, a benchmark report and a video walkthrough |
+
+The plan contains about 45 slices.
 
 ---
 
-# 1. Product vision and requirements
+## Phase 0: Foundation (v0.1.0)
 
-## 1.1 What problem does AgentFleet solve?
+**Start-of-phase summary**
+- **Objective:** a clean repository in which code can be written, checked and merged safely.
+- **Why first:** every later phase depends on the database, the test setup and the delivery pipeline.
+- **Demo at the end:** clone, `make setup && make up && make run`, create a workflow template through the API.
+- **Concepts introduced:** async request handling, units of work and transactions, schema migrations,
+  database constraints as guarantees, continuous integration.
 
-AI agents can perform useful tasks, but running them reliably in real applications introduces several problems:
+**Slices**
+- [x] **Backend scaffold** ([slice note](slices/01-backend-scaffold.md), PR #1): uv project, FastAPI app,
+  async sessions, first migration, template endpoints, tests on PostgreSQL, CI.
+- [x] **Delivery workflow** ([slice note](slices/02-delivery-workflow.md), PR #2): Makefile, coverage gate,
+  protected `main`, PR template, changelog, Dependabot.
+- [x] **Roadmap restructure** ([slice note](slices/03-roadmap-restructure.md), PR #3): this plan, the
+  architecture overview and the design-doc process.
+- [ ] **License** chosen and added (owner decision).
 
-- Workflows can take minutes or hours to complete.
-- Individual agents can fail or return invalid results.
-- Tasks may depend on the output of previous tasks.
-- Multiple independent tasks should execute concurrently.
-- Application restarts shouldn't destroy workflow progress.
-- Tool access must be controlled and auditable.
-- Developers need to understand why an agent made a particular decision.
-- AI output quality, execution time, and API costs need to be measured.
+**Exit criteria**
+- [x] The application starts locally with documented commands.
+- [x] Tests run against PostgreSQL locally and in CI.
+- [x] `main` cannot change without a passing pipeline.
+- [x] The repository explains itself: README, roadmap, architecture overview, decisions.
 
-AgentFleet addresses these problems through a centralized orchestration and observability platform.
+**End-of-phase review**
+- **Delivered:** a FastAPI service with typed configuration, a pooled async database layer, three tables
+  (`workflow_templates`, `workflow_runs`, `tasks`) created by a reviewed migration, five endpoints, and a
+  Makefile-driven pipeline enforced by branch protection.
+- **Evidence:** 34 tests with 100% branch coverage of `app/`. They include five concurrent creates of one
+  template name producing exactly one success, raw SQL failing against CHECK, UNIQUE and foreign-key
+  constraints, a failed commit leaving no partial rows, and a migration downgrade and upgrade round trip.
+- **Decisions:** PostgreSQL as source of truth ([ADR-0001](decisions/0001-postgres-source-of-truth.md)),
+  tooling ([0002](decisions/0002-slice-1-tooling.md)), data model ([0003](decisions/0003-initial-data-model.md)),
+  session and transaction boundaries ([0004](decisions/0004-session-and-transaction-boundaries.md)),
+  test database strategy ([0005](decisions/0005-test-database-strategy.md)),
+  delivery workflow ([0006](decisions/0006-delivery-workflow.md)), roadmap structure ([0007](decisions/0007-roadmap-restructure.md)).
+- **Deviations:** the original plan placed run and task tables in a later phase; they were created here so
+  the constraint tests could cover them. User and Agent CRUD were dropped from the early plan (ADR-0007).
+- **Carried forward:** structured logging and request IDs, keyset pagination (Phase 1); UUIDv7 keys;
+  a single source for the application version.
 
-## 1.2 Core user journey
+---
 
-The primary demonstration should follow this sequence:
+## Phase 1: Workflow core, runs and state machines (v0.2.0)
 
-1. A user opens AgentFleet and views the operations dashboard.
-2. They select a workflow template: *Incident Investigation*.
-3. They submit an incident description.
-4. AgentFleet creates a workflow execution and assigns tasks.
-5. Multiple agents begin investigating the incident.
-6. The dashboard updates in real time as agents execute.
-7. An agent encounters an issue, triggering a retry or recovery mechanism.
-8. An agent proposes a remediation that requires human approval.
-9. The user reviews the evidence and approves or rejects the action.
-10. The workflow completes and produces a structured investigation report.
-11. The user can inspect the complete execution history, agent activity, costs, and performance.
+**Start-of-phase summary**
+- **Objective:** a template can be instantiated as a run whose tasks and dependencies are database rows,
+  and the lifecycle rules of runs and tasks are enforced.
+- **Why now:** everything the engine does later is a state transition on these rows. If transitions can be
+  invalid or raced, no amount of retry logic on top makes execution reliable.
+- **Demo at the end:** create a run through the API and read back its task graph; a cyclic template is
+  rejected with the cycle named; an invalid transition is refused.
+- **Concepts introduced:** directed acyclic graphs and topological ordering, finite state machines,
+  compare-and-set updates, uniform API errors, structured logging.
 
-This should be the primary end-to-end experience that everything else supports.
+**Slices**
+- [ ] **Dependency graph validation**
+  - [ ] Design doc 0001: run lifecycle (run creation, task materialization, run and task state machines)
+  - [ ] `app/orchestration/dag.py`: cycle detection (Kahn's algorithm) returning a topological order or the tasks on a cycle; unit tests for chain, diamond, two-node cycle, long cycle and disconnected graphs
+  - [ ] Template validation rejects cyclic definitions with a 422 that names the cycle
+- [ ] **Run creation**
+  - [ ] Migration `0002`: `task_dependencies` (composite primary key, cascading foreign keys, no self-reference)
+  - [ ] `create_run` service: the run, one task per definition entry and the dependency rows are inserted in one transaction
+  - [ ] `POST /api/workflows/{id}/runs`, `GET /api/runs/{id}` (run with tasks and dependencies), `GET /api/runs`
+  - [ ] Tests: the materialized graph matches the definition; a failure part-way leaves no rows; unknown template is 404
+- [ ] **State machines**
+  - [ ] Allowed transitions for runs and tasks declared as data, in one module
+  - [ ] Transition functions use compare-and-set (`UPDATE ... WHERE id = ? AND status = ?`), so a stale or concurrent transition changes no row and raises a domain error
+  - [ ] Tests: every (from, to) pair, exhaustively; two sessions racing one transition produce exactly one winner
+  - [ ] ADR: transitions enforced in the application with compare-and-set, versus database triggers
+- [ ] **API consistency and logging**
+  - [ ] One error format for every failure (RFC 9457 problem details) with stable error codes, mapped in one place
+  - [ ] Request ID middleware: accepted from `X-Request-ID` or generated, returned in responses, bound into logs
+  - [ ] Structured JSON logging with a redaction rule for sensitive fields
+  - [ ] Keyset pagination on list endpoints, replacing offset pagination
 
-## 1.3 Product capabilities
+**Exit criteria**
+- [ ] A run created from a template can be read back with its tasks and dependencies.
+- [ ] No cyclic template can be stored.
+- [ ] Every invalid state transition is rejected, and the transition table is tested exhaustively.
+- [ ] All error responses share one documented format, and every log line carries a request ID.
 
-| Capability | Purpose |
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 2: Execution engine (v0.3.0)
+
+**Start-of-phase summary**
+- **Objective:** runs execute outside the request cycle, in dependency order, on independently run
+  worker processes, and every state change is recorded as an event.
+- **Why now:** the state machine exists; this phase drives it. Mock task handlers are used so the engine is
+  proven before any AI is involved.
+- **Demo at the end:** `make demo` submits the incident template with mock handlers, two workers process
+  independent tasks in parallel, and the event history is printed.
+- **Concepts introduced:** a job queue in PostgreSQL, row locks and `FOR UPDATE SKIP LOCKED`, scheduling by
+  dependency readiness, an executor interface, transactional event recording, graceful shutdown.
+
+**Slices**
+- [ ] **Task handlers and executor interface**
+  - [ ] Design doc 0002: scheduling and job claiming
+  - [ ] Template task definitions gain a `handler` name and a `config` object, validated against a registry
+  - [ ] `Executor` protocol (`execute(TaskContext) -> TaskResult`) and mock handlers (`noop`, `sleep`, `fail_n_times`)
+- [ ] **Scheduler**
+  - [ ] Readiness as one query: pending tasks whose dependencies are all completed become `queued`
+  - [ ] Run lifecycle: first queued task starts the run; all tasks completed completes it; a permanent task failure fails it and blocks dependents
+  - [ ] Tests: chain, diamond and fan-out graphs; a dependent task is never queued early
+- [ ] **Worker**
+  - [ ] `python -m app.workers`: poll, claim queued tasks with `SELECT ... FOR UPDATE SKIP LOCKED`, execute, persist result and transition together
+  - [ ] Concurrency limit, per-task timeout, graceful shutdown on SIGTERM (stop claiming, finish in-flight tasks)
+  - [ ] Tests on real concurrent connections: two workers never execute the same task; independent tasks overlap in time; a timeout fails the task
+- [ ] **Execution events**
+  - [ ] Migration: `execution_events` (monotonic ID, run, task, type, JSONB payload)
+  - [ ] Each state transition writes its event in the same transaction
+  - [ ] `GET /api/runs/{id}/events?after=<id>`
+  - [ ] Test: a failure between transition and event leaves neither
+- [ ] **Containers and demo**
+  - [ ] One image with API and worker entry points, non-root user; Compose services `api` and `worker`; image build in CI
+  - [ ] `make demo`: seed the template, start a run, print the event history
+
+**Exit criteria**
+- [ ] A submitted run returns its ID immediately and completes in the background (scenario 1).
+- [ ] Independent tasks execute concurrently; dependent tasks wait (scenarios 2 and 3).
+- [ ] Two workers on one queue never execute the same task.
+- [ ] The full history of a run can be reconstructed from its events.
+
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 3: Durable execution (v0.4.0)
+
+**Start-of-phase summary**
+- **Objective:** a run survives worker crashes, restarts, timeouts and duplicate delivery without losing
+  work or applying it twice.
+- **Why now:** this is the property that separates an orchestration engine from a task loop, and it is far
+  easier to build before real agents and external calls are attached.
+- **Demo at the end:** `make demo-crash` kills a worker with SIGKILL in the middle of a task; another worker
+  takes the task over after its lease expires; the run completes and no finished task is repeated.
+- **Concepts introduced:** leases and heartbeats, fencing tokens, at-least-once delivery, idempotency keys,
+  exponential backoff with jitter, retryable and permanent errors, cooperative cancellation.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Attempts and failure model.** Design doc 0003: what can fail between any two steps and what the
+  system guarantees in each case. `task_attempts` records every attempt's worker, timing and outcome.
+- [ ] **Leases and heartbeats.** A claim carries an owner and an expiry; workers extend it while working; a
+  reaper returns expired tasks to the queue; a fencing token stops a worker that lost its lease from
+  recording a result. Failure injection: crash mid-task, lease expiry, late result from a stale worker.
+- [ ] **Retry policy.** Per-task maximum attempts; exponential backoff with jitter; retryable versus
+  permanent errors; exhaustion fails the task and the run.
+- [ ] **Idempotency.** `Idempotency-Key` on run creation returns the original run for a repeated request.
+  Each attempt exposes a stable key for handlers to pass to external systems. Duplicate-delivery test.
+- [ ] **Cancellation.** Cancel endpoint; waiting tasks are cancelled immediately, running tasks
+  cooperatively; documented behaviour for side effects that already happened.
+- [ ] **Recovery demo and failure suite.** API and workers restart mid-run without repeating completed
+  tasks; `make demo-crash`; the failure-injection suite runs in CI.
+
+**Exit criteria**
+- [ ] A task whose worker dies is completed by another worker (scenario 7).
+- [ ] Restarting every process mid-run loses no completed work (scenario 8).
+- [ ] A task delivered twice produces one result and one side effect (scenario 9).
+- [ ] A failing task retries with backoff and then succeeds or fails permanently (scenario 6).
+
+**End-of-phase review:** _written when the phase closes._ This phase is presentation checkpoint A.
+
+---
+
+## Phase 4: Agents and tools (v0.5.0)
+
+**Start-of-phase summary**
+- **Objective:** task handlers become LLM agents that use controlled tools, and the incident
+  investigation workflow runs end to end.
+- **Why now:** the engine already handles failure, so provider errors, invalid outputs and tool timeouts
+  become ordinary retryable or permanent errors instead of special cases.
+- **Demo at the end:** submit an incident; four agents run on the deterministic fake provider and produce a
+  report whose claims cite evidence. With an API key, the same run uses a real model.
+- **Concepts introduced:** provider abstraction, structured output validation, tool allowlists and
+  sandboxing, untrusted input and prompt injection, cost accounting, evidence provenance.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Provider interface and fake provider.** Design doc 0004: agent execution and the tool sandbox. A
+  provider protocol, a scripted deterministic fake, and usage (tokens, latency, cost) recorded per call.
+- [ ] **Structured outputs.** A Pydantic schema per agent; invalid output gets one repair attempt, then a
+  permanent failure.
+- [ ] **Tool registry and sandbox.** Tools declare an input schema, a timeout and an output limit; agents
+  have allowlists; every call is recorded. Simulated tools (log search, deployment history, metrics,
+  service health) read a synthetic incident dataset.
+- [ ] **Agent executor.** The agent loop as an `Executor`; tool calls completed in an earlier attempt are
+  reused after a retry.
+- [ ] **Incident investigation workflow.** Scout, analysis, verification and report agents; a seeded
+  template; report claims reference evidence IDs; verification flags unsupported claims.
+- [ ] **Real provider adapter.** One provider SDK behind the interface, enabled by an environment key; rate
+  limits and timeouts mapped to retryable errors. Never used in CI.
+
+**Exit criteria**
+- [ ] An invalid structured response and a tool timeout are both handled by the engine (scenarios 4 and 5).
+- [ ] A completed run produces a report with traceable evidence (scenario 12).
+- [ ] No agent can call a tool outside its allowlist or with unvalidated arguments.
+- [ ] The whole test suite runs with no API key.
+
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 5: Security and human approval (v0.6.0)
+
+**Start-of-phase summary**
+- **Objective:** users authenticate, see only their workspace's data, act within their role, and approve
+  consequential actions before they run.
+- **Why now:** it must precede any public deployment, and it adds ownership columns to tables that already
+  hold data, which is the realistic way such a change arrives.
+- **Demo at the end:** a user from another workspace receives 404 for a run that exists; an agent proposes
+  a remediation, the run pauses, an operator approves it and the run resumes.
+- **Concepts introduced:** authentication and authorization, tenant isolation, expand and contract
+  migrations, pause and resume in a state machine, audit logging, threat modelling.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Authentication.** Design doc 0005 with a threat model. Users, password hashing, expiring access
+  tokens; every `/api` endpoint protected.
+- [ ] **Workspaces and roles.** `workspace_id` added to existing tables with an expand, backfill and
+  contract migration; admin, operator and viewer roles enforced in services; cross-workspace access tests.
+- [ ] **Human approval.** Approval-required tools pause their task; approval records carry requester,
+  decision, reason and expiry; approve and reject endpoints; the run resumes with its context intact.
+- [ ] **Audit log and hardening.** Append-only audit records; rate limiting on authentication; CORS; secret
+  redaction in logs and traces; prompt-injection tests on tool arguments and log content; dependency
+  scanning in CI; `SECURITY.md` and a security checklist.
+
+**Exit criteria**
+- [ ] A run pauses for approval and resumes after a decision (scenario 10).
+- [ ] A user cannot read or change another workspace's data (scenario 11).
+- [ ] Every security-relevant action has an audit record.
+- [ ] The security checklist is complete.
+
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 6: Live observability and operator UI (v0.7.0)
+
+**Start-of-phase summary**
+- **Objective:** a person can watch a run as it happens and inspect everything about it afterwards.
+- **Why now:** the events, attempts and tool records already exist; this phase exposes them.
+- **Demo at the end:** open a run in the browser, watch the task graph update live, drop the connection,
+  reconnect and see nothing missed.
+- **Concepts introduced:** server-sent events and resumable streams, metrics and traces, a typed frontend
+  consuming a typed API.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Live event stream.** Design doc 0006: event delivery. A streaming endpoint replays from
+  `Last-Event-ID` out of the persisted events and then follows live. Reconnect test.
+- [ ] **Traces and metrics.** One API call returns a run's trace (attempts, tool calls, tokens, cost).
+  A Prometheus endpoint exposes queue depth, claim latency, task duration and retries.
+- [ ] **UI scaffold and runs.** React, TypeScript and Tailwind; sign in; runs list; submit an incident.
+- [ ] **Run detail.** Live task graph (React Flow), timeline, and an inspector for inputs, outputs, tool
+  calls, retries and cost.
+- [ ] **Approvals.** Pending approvals with their evidence; approve and reject.
+
+The workflow builder and analytics pages are P2. Visual direction: [`ui-design/`](ui-design/README.md).
+
+**Exit criteria**
+- [ ] A run can be launched and watched live from the browser.
+- [ ] A client that reconnects receives every event it missed, in order.
+- [ ] Every task's inputs, outputs, tool calls, retries and cost can be inspected.
+
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 7: Deployment and public demo (v0.8.0)
+
+**Start-of-phase summary**
+- **Objective:** the application runs on the public internet and can be explored without installing anything.
+- **Why now:** it is placed before evaluation and performance work so that a working link exists as early as
+  the product is safe to expose.
+- **Demo at the end:** open the public URL, launch a sample investigation and inspect the result.
+- **Concepts introduced:** production container images, environment-specific configuration, migrations
+  during deploys, backups, health checks, operating a service.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Production images and configuration.** Hardened images for API, worker and frontend; full-stack
+  Compose; per-environment settings; a documented migration procedure for deploys.
+- [ ] **Deployment.** Hosting decision recorded as an ADR (paid services need owner approval); HTTPS;
+  managed PostgreSQL with backups; health checks; error reporting; deploy on release tag.
+- [ ] **Public demo mode and runbook.** A seeded demo workspace with synthetic data, the fake provider by
+  default, execution quotas and restricted tools. A runbook for deploy, rollback, backup and restore.
+
+**Exit criteria**
+- [ ] A visitor can launch an investigation, watch it and inspect a completed run from a public link.
+- [ ] A deploy is one tagged release, and a rollback is documented and rehearsed.
+- [ ] The demo cannot be used to spend money or reach anything outside its sandbox.
+
+**End-of-phase review:** _written when the phase closes._ This phase is presentation checkpoint B.
+
+---
+
+## Phase 8: Evaluation (v0.9.0)
+
+**Start-of-phase summary**
+- **Objective:** measure whether the agents reach the correct diagnosis, and detect when a change makes them worse.
+- **Why now:** it needs the complete incident workflow and benefits from the trace data added in Phase 6.
+- **Demo at the end:** run the scenario suite and read a report of correctness, evidence coverage, time and cost.
+- **Concepts introduced:** ground-truth datasets, deterministic versus model-based grading, regression testing for AI behaviour.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Scenario dataset.** Six simulated incidents, each with a ground-truth cause, supporting evidence,
+  expected diagnosis and recommendations.
+- [ ] **Evaluation runner.** Runs scenarios repeatedly and records diagnosis correctness, evidence
+  coverage, unsupported claims, completion rate, duration, tokens and cost. Deterministic assertions first.
+- [ ] **Comparison and regression.** A report comparing prompt or model versions; the suite runs in CI on
+  the fake provider to catch regressions in orchestration and output parsing.
+
+**Exit criteria**
+- [ ] The same scenario can be replayed and scored reproducibly.
+- [ ] A change to prompts, tools or workflow shape produces a before and after comparison.
+
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 9: Performance (v0.10.0)
+
+**Start-of-phase summary**
+- **Objective:** know, with numbers, how the engine behaves under load and where it stops scaling.
+- **Why now:** measuring earlier would measure code that was still changing.
+- **Demo at the end:** a published report: throughput against worker count, latency percentiles, the
+  bottlenecks found and what was changed.
+- **Concepts introduced:** load generation, latency percentiles, query plans, indexing for queue workloads,
+  connection pool sizing, backpressure and limits.
+
+**Slices** (steps are written when the phase starts)
+- [ ] **Benchmark harness.** A load generator and measurements of run-creation latency, claim latency,
+  scheduling latency and tasks per second against worker count. Methodology and hardware recorded.
+- [ ] **Evidence-based optimization.** Query plans for the claim and readiness queries; a partial index on
+  claimable tasks; pool sizing; polling versus `LISTEN/NOTIFY`. Before and after numbers.
+- [ ] **Limits and overload.** Per-workspace concurrency limits, API rate limits and provider budgets;
+  behaviour under worker overload, a slow database and provider rate limiting; the performance report.
+
+**Exit criteria**
+- [ ] Benchmarks are reproducible from one documented command.
+- [ ] Each optimization is justified by a measurement.
+- [ ] Known limits and the first bottleneck at higher scale are stated.
+
+**End-of-phase review:** _written when the phase closes._
+
+---
+
+## Phase 10: Presentation (v1.0.0)
+
+**Start-of-phase summary**
+- **Objective:** a reviewer can understand what the project does, how it works and why it was built this
+  way in a few minutes.
+- **Why last:** each phase already keeps the README and docs current; this phase consolidates them.
+- **Demo at the end:** the README, a short video and the public link tell the whole story.
+
+**Slices**
+- [ ] **README and architecture documentation.** Final README with screenshots, diagram, demo link, test
+  instructions and known limitations; subsystem pages consolidated from the design docs.
+- [ ] **Demo video.** A 2-4 minute walkthrough that includes a failure and its recovery.
+- [ ] **Final review.** The definition of done verified item by item; `v1.0.0` released.
+
+**End-of-phase review:** _written when the phase closes._ This phase is presentation checkpoint C.
+
+---
+
+## Requirements that span phases
+
+### Production practices and where they enter
+
+| Practice | Phase |
 |---|---|
-| Workflow orchestration | Coordinate multi-step agent tasks |
-| Durable execution | Preserve workflow progress across restarts |
-| Concurrency | Execute independent tasks simultaneously |
-| Failure recovery | Retries, timeouts, checkpoints and resumption |
-| Observability | Inspect every execution step |
-| Human approval | Control sensitive or consequential operations |
-| Agent management | Define agent roles, models and permissions |
-| Evaluation | Measure output quality and performance |
-| Security | Authenticate users and enforce access controls |
-| Performance monitoring | Measure latency, throughput and cost |
+| Typed configuration from the environment; no secrets in the repository | 0 (done) |
+| Versioned, reversible migrations with a drift check | 0 (done) |
+| Protected `main`, required CI, coverage gate, dependency update PRs | 0 (done) |
+| Uniform error format, request IDs, structured logs | 1 |
+| Compare-and-set state transitions | 1 |
+| Keyset pagination | 1 |
+| Queue claiming with row locks | 2 |
+| State changes and their events committed together | 2 |
+| Graceful shutdown; container images built in CI | 2 |
+| Leases, heartbeats and fencing tokens | 3 |
+| Retries with backoff and jitter; idempotency keys | 3 |
+| Timeouts and output limits on every external call | 4 |
+| Authentication, authorization, tenant isolation, audit log | 5 |
+| Schema changes on populated tables (expand, backfill, contract) | 5 |
+| Dependency vulnerability scanning | 5 |
+| Metrics and traces | 6 |
+| Health checks, backups, runbook, deploy on tag | 7 |
+| Quotas and rate limits | 5, 7, 9 |
+| Load testing with published numbers | 9 |
 
-## 1.4 What AgentFleet is NOT
+### Testing layers
 
-Avoid turning this into an excessively broad platform.
+| Layer | Verifies | From |
+|---|---|---|
+| Unit | Pure logic: validation, graph algorithms, transition tables, backoff | Phase 0 |
+| Integration | API, services and database together on PostgreSQL | Phase 0 |
+| Concurrency | Racing connections: claims, transitions, duplicate submissions | Phase 0 |
+| Failure injection | Crash mid-task, lease expiry, duplicate delivery, restart | Phase 3 |
+| Security | Authorization, isolation, input validation, prompt injection | Phase 4 |
+| End to end | The scenarios below, through the public API | Phase 2 |
+| Evaluation | Agent correctness against ground truth | Phase 8 |
+| Performance | Throughput and latency under load | Phase 9 |
 
-The first version does not need:
+Tests never call a real LLM API. Tests run against PostgreSQL, not SQLite.
 
-- A marketplace for agents.
-- Arbitrary user-written code execution.
-- A fully general visual programming language.
-- Multiple deployment regions.
-- Kubernetes.
-- A complicated billing system.
-- Hundreds of integrations.
-- A custom AI model.
-- A fully autonomous production remediation system.
+### Essential end-to-end scenarios
 
-These are potential future extensions, not requirements for a successful capstone.
+| # | Scenario | Phase |
+|---|---|---|
+| 1 | A user submits a workflow and receives a run ID immediately | 2 |
+| 2 | Multiple independent tasks execute concurrently | 2 |
+| 3 | A dependent task waits until its prerequisites complete | 2 |
+| 4 | An agent returns an invalid structured response | 4 |
+| 5 | A tool call times out | 4 |
+| 6 | A task fails and successfully retries | 3 |
+| 7 | A worker crashes during execution | 3 |
+| 8 | The application restarts and recovers the workflow | 3 |
+| 9 | A duplicate task delivery does not cause duplicate side effects | 3 |
+| 10 | A workflow pauses for human approval | 5 |
+| 11 | An unauthorized user attempts to access another user's workflow | 5 |
+| 12 | A workflow completes and produces a report with traceable evidence | 4 |
 
----
+### Security by stage
 
-# 2. Recommended technology stack
-
-The stack should demonstrate transferable backend skills rather than simply use as many technologies as possible.
-
-## Backend
-
-| Technology | Purpose |
+| Stage | Requirement |
 |---|---|
-| Python | Primary programming language |
-| FastAPI | HTTP API and application layer |
-| Pydantic | Validation and structured schemas |
-| SQLAlchemy | Database interaction and ORM |
-| Alembic | Database migrations |
-| PostgreSQL | Persistent application and workflow state |
-| asyncio | Asynchronous execution and concurrency |
-| WebSockets or SSE | Real-time execution updates |
-| pytest | Automated testing |
-| HTTPX | API and integration testing |
-
-## AI and agent layer
-
-| Technology | Purpose |
-|---|---|
-| LLM provider API | Agent reasoning and generation |
-| Provider abstraction | Allow switching between models |
-| Structured outputs | Consistent agent responses |
-| Tool/function calling | Controlled access to external capabilities |
-| Custom orchestration layer | Agent coordination and execution |
-
-Use an established provider SDK or a lightweight agent framework where appropriate, but own the execution lifecycle: the orchestration logic is implemented in this project rather than delegated to a framework.
-
-Do not make the entire project dependent on a single agent framework.
-
-## Infrastructure
-
-| Technology | Purpose |
-|---|---|
-| Docker | Application containerization |
-| Docker Compose | Local development environment |
-| Redis (optional initially) | Pub/sub, caching, coordination |
-| GitHub Actions | CI and automated checks |
-| Cloud hosting | Public deployment |
-| Structured logging | Operational visibility |
-
-**Important architectural decision:** PostgreSQL should be the source of truth for workflow state. Redis should not be the only place where execution information exists.
-
-For the first implementation, a PostgreSQL-backed worker with durable jobs, leases, and checkpoints is a reasonable first implementation. A dedicated workflow engine such as Temporal can be evaluated later if the complexity justifies it.
-
-## Frontend
-
-Recommended:
-
-- React
-- TypeScript
-- Tailwind CSS
-- React Flow for workflow visualization
-- A charting library for performance metrics
-
-The backend is the main engineering focus, but the frontend should feel like a complete product.
-
----
-
-# 3. High-level system architecture
-
-The system should be separated into distinct responsibilities.
-
-```text
-                    AGENTFLEET
-                         |
-             ┌───────────▼───────────┐
-             │      Frontend         │
-             │  Dashboard / Workflow │
-             └───────────┬───────────┘
-                         |
-                  HTTP / WebSocket
-                         |
-             ┌───────────▼───────────┐
-             │      FastAPI          │
-             │    API Layer          │
-             └───────────┬───────────┘
-                         |
-             ┌───────────▼───────────┐
-             │   Application Layer   │
-             │ Workflow Management   │
-             │ Authentication        │
-             │ Approval Management   │
-             └───────────┬───────────┘
-                         |
-             ┌───────────▼───────────┐
-             │  Orchestration Engine │
-             │                       │
-             │ Dependency Management│
-             │ Scheduling            │
-             │ Execution State       │
-             │ Retry / Recovery      │
-             └───────────┬───────────┘
-                         |
-              ┌──────────┴──────────┐
-              |                     |
-      ┌───────▼────────┐    ┌──────▼────────┐
-      │ Worker Pool    │    │ Event System  │
-      │                │    │               │
-      │ Agent Executor │    │ Execution Logs│
-      │ Tool Executor  │    │ Event Stream  │
-      └───────┬────────┘    └──────┬────────┘
-              |                    |
-       ┌──────▼────────────────────▼─────┐
-       │           PostgreSQL            │
-       │                                 │
-       │ Workflows / Tasks / Agents      │
-       │ Events / Checkpoints / Approvals│
-       │ Results / Audit Records         │
-       └─────────────────────────────────┘
-```
-
-### Architectural principles
-
-1. Keep the API layer separate from execution logic.
-2. Treat workflows as persistent state machines.
-3. Keep individual agent execution independent of the orchestration engine.
-4. Use explicit task dependencies.
-5. Persist state transitions before reporting them to clients.
-6. Make external actions idempotent wherever possible.
-7. Treat events as an observable record of execution.
-8. Keep business logic separate from infrastructure implementation.
-
-Avoid starting with microservices. Build a modular monolith with independently managed workers. This provides architectural separation without unnecessary deployment complexity.
-
----
-
-# 4. Detailed development roadmap
-
-The following phases are ordered deliberately. Each phase should produce a working result before the next begins.
-
-# PHASE 0 — Repository and project foundation
-
-**Objective:** Establish a clean, maintainable development environment.
-
-### Step 0.1 — Set up the repository
-
-- Initialize a clean repository.
-- Add a license, README and `.gitignore`.
-- Establish a clean Git history from the first commit.
-
-### Step 0.2 — Establish the project structure
-
-Suggested structure:
-
-```text
-agentfleet/
-│
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   ├── orchestration/
-│   │   ├── agents/
-│   │   ├── tools/
-│   │   ├── workers/
-│   │   └── events/
-│   │
-│   ├── tests/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── e2e/
-│   │
-│   └── migrations/
-│
-├── frontend/
-│
-├── evaluation/
-│   ├── scenarios/
-│   ├── datasets/
-│   └── benchmarks/
-│
-├── docs/
-│   ├── architecture/
-│   ├── decisions/
-│   └── diagrams/
-│
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-└── README.md
-```
-
-The structure may be adjusted as the project grows.
-
-### Step 0.3 — Establish development standards
-
-- Configure formatting and linting.
-- Set up pytest.
-- Configure environment variables.
-- Establish Git branching and commit conventions.
-- Add initial CI checks.
-- Document local development setup.
-
-**Milestone 0: Foundation ready**
-
-Success criteria:
-- Application starts locally.
-- Dependencies install correctly.
-- Database can be started.
-- Tests execute.
-- Repository is understandable and documented.
-
----
-
-# PHASE 1 — Database and core backend
-
-**Objective:** Build the foundation that all subsequent functionality depends on.
-
-### Step 1.1 — Design the database
-
-Identify the main entities and their relationships.
-
-Initial entities:
-
-| Entity | Responsibility |
-|---|---|
-| User | Application users |
-| Agent | Agent configuration and identity |
-| WorkflowTemplate | Reusable workflow definitions |
-| WorkflowRun | Individual workflow execution |
-| Task | Individual workflow operation |
-| TaskDependency | Dependencies between tasks |
-| ExecutionEvent | Historical execution events |
-| Checkpoint | Recoverable execution state |
-| Approval | Human approval requests |
-| Tool | Available agent capabilities |
-| ToolExecution | Record of tool calls |
-| AuditLog | Security-sensitive actions |
-
-Create an ER diagram before implementing all the tables.
-
-Consider:
-- Primary and foreign keys.
-- Indexing.
-- Relationships.
-- Constraints.
-- Timestamps.
-- JSON fields where flexible structured data is appropriate.
-- Deletion and retention policies.
-
-### Step 1.2 — Implement database integration
-
-- Configure SQLAlchemy.
-- Create database models.
-- Set up Alembic migrations.
-- Establish transaction boundaries.
-- Implement database session management.
-- Test database connectivity.
-
-### Step 1.3 — Build initial API endpoints
-
-Start with:
-
-```text
-POST   /api/workflows
-GET    /api/workflows
-GET    /api/workflows/{id}
-
-POST   /api/workflows/{id}/runs
-GET    /api/runs/{id}
-
-GET    /api/agents
-GET    /api/agents/{id}
-```
-
-These can initially return simple data without actual agent execution.
-
-### Testing requirements
-
-- Database model tests.
-- CRUD integration tests.
-- Validation tests.
-- Invalid ID handling.
-- Transaction rollback tests.
-- Migration tests.
-
-**Milestone 1: Functional backend foundation**
-
-Users, agents, workflow templates, and workflow runs can be created and retrieved through the API.
-
----
-
-# PHASE 2 — Workflow orchestration engine
-
-**Objective:** Build the core execution engine that makes AgentFleet more than a conventional CRUD application.
-
-This is one of the most important phases.
-
-### Step 2.1 — Define workflow structure
-
-A workflow consists of tasks, dependencies, and execution rules.
-
-Example:
-
-```text
-Incident Investigation
-          |
-          ▼
-   Gather Evidence
-       /      \
-      ▼        ▼
- Analyze Logs  Analyze Deployment
-      |        |
-      └───┬────┘
-          ▼
-    Compare Findings
-          |
-          ▼
-     Verify Diagnosis
-          |
-          ▼
-    Human Approval
-          |
-          ▼
-   Generate Report
-```
-
-Tasks should have:
-
-- Unique identifiers.
-- A defined execution type.
-- Input and output schemas.
-- Dependencies.
-- Timeout configuration.
-- Retry configuration.
-- Execution status.
-- Associated agent or tool.
-
-### Step 2.2 — Implement workflow state management
-
-Define explicit lifecycle states.
-
-Workflow:
-
-```text
-PENDING
-  |
-  ▼
-RUNNING
-  |
-  ├── COMPLETED
-  ├── FAILED
-  ├── CANCELLED
-  └── WAITING_FOR_APPROVAL
-```
-
-Task:
-
-```text
-PENDING
-  |
-  ▼
-QUEUED
-  |
-  ▼
-RUNNING
-  |
-  ├── COMPLETED
-  ├── RETRYING
-  ├── FAILED
-  └── WAITING_FOR_APPROVAL
-```
-
-Define valid state transitions. Prevent invalid transitions, such as completing a task that was never started.
-
-### Step 2.3 — Build the scheduler
-
-Implement functionality that:
-
-- Identifies tasks ready for execution.
-- Checks dependency completion.
-- Schedules eligible tasks.
-- Prevents dependent tasks from running prematurely.
-- Tracks active executions.
-- Handles workflow completion.
-
-Initially, support sequential execution.
-
-Then introduce parallel execution for independent tasks.
-
-### Step 2.4 — Build the task executor
-
-Create a standardized execution interface.
-
-The orchestrator should not need to know whether a task is:
-
-- An AI agent.
-- A normal Python function.
-- An external API call.
-- A background operation.
-
-Each executor should accept validated input and produce a standardized result.
-
-### Step 2.5 — Introduce background workers
-
-Move execution outside the HTTP request lifecycle.
-
-A user submitting a workflow should receive a run ID immediately rather than waiting for the entire workflow to finish.
-
-Implement:
-- Job claiming.
-- Worker execution.
-- Execution status updates.
-- Worker concurrency limits.
-- Task timeouts.
-
-**Milestone 2: Working orchestration engine**
-
-A workflow containing multiple tasks can be submitted, executed in dependency order, and its results retrieved.
-
-Use mocked task handlers initially. Real AI integration comes later.
-
-### Testing requirements
-
-- Sequential task execution.
-- Parallel independent tasks.
-- Dependency enforcement.
-- Invalid dependency detection.
-- Circular dependency detection.
-- Worker concurrency limits.
-- State transition validation.
-- Task failure handling.
-
----
-
-# PHASE 3 — Durable execution and failure recovery
-
-**Objective:** Ensure workflows remain reliable even when the application or workers encounter failures.
-
-This is one of the most valuable technical differentiators in the project.
-
-### Step 3.1 — Persist execution progress
-
-Every meaningful state transition should be stored.
-
-Persist:
-- Workflow status.
-- Task status.
-- Execution attempts.
-- Start and completion times.
-- Task results.
-- Checkpoints.
-- Failure information.
-
-The database must be authoritative.
-
-### Step 3.2 — Implement checkpointing
-
-Save recoverable execution progress at appropriate boundaries.
-
-For example:
-
-```text
-Evidence collection      COMPLETED
-Log analysis             COMPLETED
-Deployment analysis      COMPLETED
-Diagnosis verification   RUNNING
-```
-
-If the application restarts, it should not rerun completed work unnecessarily.
-
-### Step 3.3 — Implement retry policies
-
-Support:
-- Maximum attempts.
-- Exponential backoff.
-- Retryable versus permanent errors.
-- Per-task retry configuration.
-- Maximum execution duration.
-
-For example:
-
-```text
-Attempt 1 → Failure
-Wait 2 seconds
-
-Attempt 2 → Failure
-Wait 4 seconds
-
-Attempt 3 → Success
-```
-
-### Step 3.4 — Implement idempotency
-
-This is particularly important.
-
-If a worker crashes after an external action succeeds but before the result is saved, the system may attempt that action again.
-
-Design mechanisms to prevent duplicate side effects.
-
-Examples:
-- Idempotency keys.
-- Unique operation identifiers.
-- Transactional state transitions.
-- Deduplication.
-- Safe handling of repeated requests.
-
-Do not assume that exactly-once execution is automatically achievable across databases and external APIs. Design for at-least-once delivery with idempotent operations.
-
-### Step 3.5 — Implement worker recovery
-
-Introduce:
-- Worker heartbeats.
-- Job leases.
-- Lease expiration.
-- Stale-job detection.
-- Recovery of abandoned executions.
-
-A worker should not permanently own a job simply because it crashed.
-
-### Step 3.6 — Implement cancellation
-
-Allow users to cancel workflows.
-
-Handle:
-- Pending tasks.
-- Running tasks.
-- Future scheduled tasks.
-- Cancellation requests during execution.
-
-Document how cancellation interacts with already-completed external actions.
-
-### Testing requirements
-
-Simulate:
-- Application restart during execution.
-- Worker crash.
-- Database connection failure.
-- Repeated job delivery.
-- Timeout.
-- Retry exhaustion.
-- Duplicate submission.
-- Cancellation during execution.
-
-**Milestone 3: Durable orchestration**
-
-Demonstrate that a workflow can survive an application restart and resume without unnecessarily repeating completed operations.
-
-This is a key demonstration scenario for the project.
-
----
-
-# PHASE 4 — AI agents and tool execution
-
-**Objective:** Integrate real AI agents into the orchestration engine.
-
-The execution engine should already work without an LLM. Now give it intelligent task handlers.
-
-### Step 4.1 — Establish an LLM provider abstraction
-
-Create a common interface for model calls.
-
-Responsibilities:
-- Send prompts.
-- Supply structured context.
-- Handle model responses.
-- Validate structured output.
-- Track token usage.
-- Track latency and cost.
-- Handle provider errors.
-
-Avoid scattering provider-specific API calls throughout the application.
-
-### Step 4.2 — Implement agent definitions
-
-Each agent should have:
-
-- Name.
-- Description.
-- Role.
-- System instructions.
-- Model configuration.
-- Available tools.
-- Permission level.
-- Input and output schemas.
-
-### Step 4.3 — Build the first specialized agents
-
-For incident investigation:
-
-**Scout Agent**
-- Collects relevant logs and deployment events.
-- Identifies potentially relevant evidence.
-
-**Analysis Agent**
-- Examines the evidence.
-- Identifies patterns and possible causes.
-- Produces structured hypotheses.
-
-**Verification Agent**
-- Challenges proposed explanations.
-- Checks whether evidence supports each conclusion.
-- Identifies missing information.
-
-**Report Agent**
-- Produces a structured final report.
-- Summarizes findings and recommended actions.
-
-Do not create agents simply to increase their number. Each should have a distinct responsibility.
-
-### Step 4.4 — Implement tool calling
-
-Tools should be separate from agents.
-
-Example tools:
-- Search logs.
-- Retrieve deployment history.
-- Query simulated metrics.
-- Inspect service health.
-- Run a predefined diagnostic check.
-
-Each tool needs:
-- A defined input schema.
-- Validation.
-- Authorization.
-- Execution timeout.
-- Standardized output.
-- Error handling.
-- Execution logging.
-
-### Step 4.5 — Implement context management
-
-Agents need access to relevant workflow information without passing enormous amounts of unrelated information between every step.
-
-Implement:
-- Workflow context.
-- Task-specific input.
-- Evidence references.
-- Previous task outputs.
-- Context size limits.
-- Structured output validation.
-
-### Step 4.6 — Implement evidence provenance
-
-Every important claim in the final report should reference supporting evidence.
-
-For example:
-
-```text
-Finding:
-API latency increased following deployment 1.8.4.
-
-Evidence:
-- Deployment timestamp: 14:32
-- P95 latency increased from 180ms to 920ms
-- Database connection pool saturation began at 14:35
-
-Confidence:
-High
-
-Alternative explanation:
-Increased request volume.
-```
-
-The verification agent should distinguish supported conclusions from speculation.
-
-**Milestone 4: Real AI workflow**
-
-A submitted incident is investigated by multiple specialized agents and produces a structured report with supporting evidence.
-
-### Testing requirements
-
-- Mocked LLM responses.
-- Invalid structured outputs.
-- Provider timeout.
-- Rate limiting.
-- Tool execution failure.
-- Malicious tool arguments.
-- Missing evidence.
-- Context size limits.
-- Agent disagreement.
-- Incorrect conclusions.
-
----
-
-# PHASE 5 — Human approval and security
-
-**Objective:** Make AgentFleet safe enough to demonstrate as a serious software product.
-
-Security should not be treated as a final polish phase. It must be incorporated throughout development, with this phase consolidating the security model.
-
-### Step 5.1 — Authentication
-
-Implement:
-- User registration.
-- Login.
-- Secure session or token management.
-- Password hashing if using password authentication.
-- Logout and token/session expiration.
-- Protected API endpoints.
-
-### Step 5.2 — Authorization
-
-Implement role-based permissions initially.
-
-Example:
-
-| Role | Permissions |
-|---|---|
-| Admin | Manage agents, tools, workflows and users |
-| Operator | Launch and manage workflows |
-| Viewer | Inspect executions and reports |
-
-Enforce authorization on the backend, not just by hiding frontend buttons.
-
-Also ensure users can only access resources belonging to their organization or workspace.
-
-### Step 5.3 — Tool security
-
-This is especially important for agent systems.
-
-Implement:
-- Tool allowlists.
-- Per-agent tool permissions.
-- Strict argument validation.
-- Execution timeouts.
-- Output size limits.
-- Rate limits.
-- Restricted network access where applicable.
-- No arbitrary shell execution.
-- No unrestricted filesystem access.
-
-Treat agent-generated arguments and external content as untrusted input.
-
-### Step 5.4 — Human approval system
-
-Some tools should require approval before execution.
-
-Example:
-
-```text
-Agent proposes remediation
-           |
-           ▼
-    Approval requested
-           |
-      ┌────┴────┐
-      ▼         ▼
-   Approved   Rejected
-      |         |
-      ▼         ▼
- Execute     Stop / Revise
-```
-
-Implement:
-- Approval requests.
-- Approval status.
-- User identity.
-- Approval timestamps.
-- Expiration.
-- Rejection reasons.
-- Audit records.
-
-The workflow should be able to pause and resume without losing its execution context.
-
-### Step 5.5 — Security hardening
-
-Address:
-- Secret management.
-- SQL injection.
-- Cross-site scripting.
-- CSRF where relevant.
-- CORS configuration.
-- Authentication brute-force protection.
-- Sensitive information in logs.
-- Prompt injection.
-- Untrusted document and log content.
-- Insecure direct object references.
-- Dependency vulnerabilities.
-
-Do not treat an agent's interpretation of external logs or documents as trusted instructions.
-
-### Security milestone
-
-Create a dedicated security checklist and verify it before public deployment.
-
-**Milestone 5: Secure multi-user application**
-
-Users can authenticate, access only authorized resources, control agent permissions, and approve sensitive operations.
-
-### Testing requirements
-
-- Unauthenticated access.
-- Unauthorized resource access.
-- Cross-user data isolation.
-- Invalid tokens.
-- Expired sessions.
-- Invalid tool arguments.
-- Prompt injection attempts.
-- Approval authorization.
-- Audit log integrity.
-- Secret leakage checks.
-
----
-
-# PHASE 6 — Observability and real-time frontend integration
-
-**Objective:** Make execution understandable and visually engaging.
-
-This is where the product starts feeling like a real operations platform.
-
-### Step 6.1 — Build the event system
-
-Generate structured events for meaningful execution changes.
-
-Examples:
-
-```text
-workflow.created
-workflow.started
-task.queued
-agent.started
-tool.called
-tool.completed
-task.failed
-task.retrying
-approval.requested
-approval.granted
-workflow.completed
-```
-
-Persist these events so execution history can be reconstructed.
-
-### Step 6.2 — Implement execution traces
-
-Each workflow should have a trace containing:
-
-- Workflow ID.
-- Task ID.
-- Agent ID.
-- Execution attempt.
-- Start/end timestamps.
-- Inputs and outputs.
-- Tool calls.
-- Errors.
-- Token usage.
-- Model/provider.
-- Estimated cost.
-
-Use correlation IDs to connect events across a workflow.
-
-Be careful not to expose secrets, authentication tokens, or sensitive personal information in traces.
-
-### Step 6.3 — Implement live event streaming
-
-Use SSE or WebSockets.
-
-The frontend should receive:
-- Workflow state changes.
-- Agent activity.
-- Task progress.
-- Tool execution results.
-- Errors.
-- Approval requests.
-
-Support reconnecting and catching up using persisted event IDs. Do not rely exclusively on an in-memory event stream.
-
-### Step 6.4 — Build the main dashboard
-
-Suggested pages:
-
-**Fleet Overview**
-- Active workflows.
-- Available agents.
-- Agent health.
-- Recent activity.
-- Success/failure statistics.
-
-**Workflow Builder**
-- Create workflows.
-- Define agents.
-- Connect task dependencies.
-- Configure execution options.
-
-**Live Operations**
-- Active workflow graph.
-- Agent status.
-- Execution timeline.
-- Current task.
-- Resource usage.
-
-**Execution Inspector**
-- Full task history.
-- Inputs and outputs.
-- Tool calls.
-- Errors.
-- Retry history.
-- Token usage and cost.
-
-**Approvals**
-- Pending approvals.
-- Proposed actions.
-- Supporting information.
-- Approve/reject controls.
-
-**Analytics**
-- Workflow success rates.
-- Average execution time.
-- Cost per workflow.
-- Agent performance.
-
-### Step 6.5 — Visual identity
-
-Use a restrained sci-fi command-center theme.
-
-Design principles:
-- Dark navy/charcoal foundation.
-- Teal/cyan active states.
-- Amber warnings.
-- Red failure states.
-- Clean typography.
-- Restrained glow and animation.
-- Highly readable technical data.
-- Consistent spacing and component design.
-
-The interface should look like professional developer tooling, not a video game menu.
-
-**Milestone 6: Complete interactive application**
-
-A user can launch an investigation and watch it progress live, inspect its execution history, and interact with approval requests.
-
----
-
-# PHASE 7 — Evaluation and quality measurement
-
-**Objective:** Demonstrate that the system can measure whether its agents are actually useful.
-
-This is an important differentiator between an AI demo and an engineered AI product.
-
-### Step 7.1 — Create evaluation scenarios
-
-Create a fixed dataset of simulated incidents.
-
-Examples:
-
-1. Database connection pool exhaustion.
-2. Increased API latency after deployment.
-3. Memory leak in an application service.
-4. Elevated error rate caused by a dependency.
-5. Increased request volume.
-6. Failed background processing jobs.
-
-Each scenario should have:
-- Ground-truth cause.
-- Supporting evidence.
-- Expected diagnosis.
-- Relevant logs and metrics.
-- Expected recommendations.
-
-### Step 7.2 — Build evaluation execution
-
-Allow the same scenario to run repeatedly.
-
-Record:
-- Correct diagnosis.
-- Evidence coverage.
-- Unsupported claims.
-- Completion rate.
-- Execution time.
-- Token consumption.
-- Estimated cost.
-
-### Step 7.3 — Compare models and prompts
-
-Allow controlled comparisons.
-
-For example:
-- Model A vs Model B.
-- Prompt version 1 vs Prompt version 2.
-- Single-agent vs multi-agent workflow.
-
-Keep other variables consistent where possible.
-
-### Step 7.4 — Build regression testing
-
-Run evaluation scenarios after changing:
-- Agent instructions.
-- Models.
-- Tool implementations.
-- Workflow architecture.
-
-Use a mixture of deterministic assertions and model-based quality evaluations. Avoid relying entirely on another LLM to judge an LLM.
-
-**Milestone 7: Reproducible agent evaluation**
-
-Measurable improvements or regressions in agent quality, cost, and performance can be demonstrated.
-
----
-
-# PHASE 8 — Performance and scalability
-
-**Objective:** Understand and document how the backend behaves under load.
-
-### Step 8.1 — Establish benchmarks
-
-Measure:
-- Workflow creation latency.
-- Task scheduling latency.
-- Event delivery latency.
-- Workflow completion time.
-- Concurrent execution capacity.
-- Database query performance.
-- Worker utilization.
-
-### Step 8.2 — Introduce resource limits
-
-Implement:
-- Maximum active workflows.
-- Per-user concurrency limits.
-- Per-agent concurrency limits.
-- API rate limits.
-- Model request budgets.
-- Maximum workflow duration.
-- Maximum retry count.
-
-### Step 8.3 — Optimize bottlenecks
-
-Use actual profiling and benchmark results.
-
-Potential areas:
-- Database indexes.
-- Connection pooling.
-- Query optimization.
-- Worker concurrency.
-- Event delivery.
-- Caching.
-- Payload sizes.
-
-### Step 8.4 — Test failure under load
-
-Simulate:
-- Worker overload.
-- Database slowdowns.
-- Provider rate limiting.
-- Large workflow volumes.
-- Repeated failures.
-- Multiple concurrent users.
-
-**Milestone 8: Performance report**
-
-Publish actual benchmark results, testing methodology, hardware/configuration, limitations, and identified bottlenecks.
-
----
-
-# PHASE 9 — Docker, CI/CD and deployment
-
-**Objective:** Turn the project into an accessible, reproducible application.
-
-### Step 9.1 — Containerize
-
-Create Docker configurations for:
-- Backend API.
-- Worker.
-- Frontend.
-- PostgreSQL.
-- Redis if used.
-
-Use Docker Compose for local development.
-
-### Step 9.2 — Establish CI
-
-GitHub Actions should run:
-- Formatting checks.
-- Linting.
-- Type checks where applicable.
-- Unit tests.
-- Integration tests.
-- Migration checks.
-- Security/dependency checks.
-
-### Step 9.3 — Deploy
-
-Deploy:
-- Frontend.
-- Backend API.
-- Background workers.
-- PostgreSQL database.
-- Redis if required.
-
-Use managed services where practical.
-
-### Step 9.4 — Production configuration
-
-Implement:
-- Environment-specific configuration.
-- Secret management.
-- HTTPS.
-- Database backups.
-- Health checks.
-- Structured logs.
-- Error reporting.
-- Monitoring.
-- Database migration procedures.
-
-### Step 9.5 — Public demo mode
-
-Provide a preconfigured demonstration account or demo environment.
-
-Use synthetic data and simulated tools.
-
-Visitors should be able to:
-- Launch an example investigation.
-- Watch it execute.
-- Inspect a completed run.
-- View a sample evaluation report.
-
-Protect the public demo with execution quotas and strict tool restrictions.
-
-**Milestone 9: Publicly accessible application**
-
-A hiring manager can access and explore the application without needing to install or configure anything.
-
----
-
-# PHASE 10 — Portfolio presentation
-
-**Objective:** Make the project and its engineering decisions easy for visitors and technical reviewers to understand.
-
-### Step 10.1 — README
-
-Include:
-- Product overview.
-- Problem being solved.
-- Screenshots.
-- Feature list.
-- Technology stack.
-- Architecture diagram.
-- Setup instructions.
-- Demo link.
-- Testing instructions.
-- Known limitations.
-
-### Step 10.2 — Architecture documentation
-
-Explain important decisions.
-
-Examples:
-
-- Why PostgreSQL is the source of truth.
-- Why the worker architecture was selected.
-- How task dependencies are represented.
-- How concurrent execution works.
-- How workflow recovery works.
-- How duplicate execution is prevented.
-- How permissions are enforced.
-- How events are delivered.
-- How agent outputs are evaluated.
-
-### Step 10.3 — Architecture Decision Records
-
-Document major decisions as short ADRs.
-
-For example:
-
-```text
-ADR-001: PostgreSQL as workflow state store
-
-Context:
-Workflow execution must survive restarts.
-
-Decision:
-Persist workflow and task state in PostgreSQL.
-
-Alternatives:
-Redis-only state management.
-External workflow engine.
-
-Trade-offs:
-More database coordination and implementation
-complexity, but durable state and transactional
-consistency for the initial application.
-```
-
-### Step 10.4 — Demo video
-
-Create a 2–4 minute walkthrough.
-
-Suggested sequence:
-
-1. Introduce the problem.
-2. Launch an incident investigation.
-3. Show agents executing concurrently.
-4. Demonstrate a simulated failure and retry.
-5. Show a human approval request.
-6. Display the final report.
-7. Inspect execution traces and performance metrics.
-
-**Milestone 10: Portfolio-ready project**
-
-A deployed, documented, tested application with a clear technical story.
-
----
-
-# 5. Testing strategy — requirements throughout development
-
-Testing should not be saved for the end.
-
-Use the following testing layers:
-
-| Test type | What it verifies |
-|---|---|
-| Unit | Individual functions, services and business rules |
-| Integration | Database, worker, API and external-service interactions |
-| End-to-end | Complete user workflows |
-| Failure injection | Recovery from crashes and errors |
-| Security | Authorization, input validation and isolation |
-| Performance | Throughput, latency and concurrency |
-| Evaluation | Agent correctness and output quality |
-
-## Essential end-to-end test scenarios
-
-These are particularly important:
-
-1. A user submits a workflow and receives a run ID.
-2. Multiple independent tasks execute concurrently.
-3. A dependent task waits until its prerequisites complete.
-4. An agent returns an invalid structured response.
-5. A tool call times out.
-6. A task fails and successfully retries.
-7. A worker crashes during execution.
-8. The application restarts and recovers the workflow.
-9. A duplicate task delivery does not cause duplicate side effects.
-10. A workflow pauses for human approval.
-11. An unauthorized user attempts to access another user's workflow.
-12. A workflow completes and produces a report with traceable evidence.
-
-The primary demonstration should include several of these scenarios, not just the happy path.
-
----
-
-# 6. Security milestones
-
-Security should be treated as a continuous requirement.
-
-| Development stage | Security requirement |
-|---|---|
-| Foundation | Secrets, environment configuration, dependency hygiene |
-| Database/API | Input validation, safe queries, request validation |
-| Orchestration | Execution limits, timeout enforcement, safe state transitions |
-| AI integration | Prompt injection defenses, output validation, tool restrictions |
-| Multi-user | Authentication, authorization, resource isolation |
-| Human approval | Approval authorization, audit history, safe action execution |
+| Foundation | Secrets and configuration outside the repository; pinned dependencies |
+| API | Request validation, parameterized queries, size limits, no internal details in errors |
+| Orchestration | Timeouts, concurrency limits, transitions that cannot be bypassed |
+| Agents | Tool allowlists, validated arguments, output limits, prompt-injection defences |
+| Multi-user | Authentication, authorization on the backend, workspace isolation |
+| Approval | Authorization of approvers, audit history, safe execution of approved actions |
 | Deployment | HTTPS, secret management, backups, monitoring |
 | Public demo | Synthetic data, quotas, restricted tools, abuse protection |
 
-**Important:** Never expose an unrestricted shell, arbitrary Python execution, or unrestricted filesystem access to an LLM-controlled agent in this project.
+An LLM-controlled agent is never given an unrestricted shell, arbitrary code execution or unrestricted
+filesystem access.
 
 ---
 
-# 7. Delivery approach
+## Definition of done
 
-Work proceeds in small slices of roughly 2-4 hours, each producing a testable improvement and a short build note in `docs/slices/`. The quality of the finished product matters more than completing every optional feature.
+The project is ready to present when every item is true. Items are ticked only when complete.
 
-If time becomes constrained, prioritize the working product, durable execution, observability, security, and deployment before advanced benchmarking or optional UI features (see section 9).
-
----
-
-# 8. Definition of done
-
-AgentFleet should not be considered finished merely because agents can communicate with one another.
-
-The project is ready to present when it satisfies these requirements.
-
-## Core product
-- [ ] User can submit an incident investigation.
-- [ ] Workflow is created and persisted.
+**Core product**
+- [ ] A user can submit an incident investigation.
+- [ ] The workflow is created and persisted.
 - [ ] Multiple specialized agents execute tasks.
 - [ ] Task dependencies are respected.
-- [ ] Independent tasks can execute concurrently.
-- [ ] Final report includes evidence and recommendations.
+- [ ] Independent tasks execute concurrently.
+- [ ] The final report includes evidence and recommendations.
 
-## Backend engineering
+**Backend engineering**
 - [ ] Clean modular architecture.
-- [ ] Database migrations.
+- [x] Database migrations.
 - [ ] Background workers.
 - [ ] Durable workflow state.
 - [ ] Retry and timeout handling.
@@ -1383,7 +558,7 @@ The project is ready to present when it satisfies these requirements.
 - [ ] Idempotent task handling.
 - [ ] Cancellation support.
 
-## AI engineering
+**AI engineering**
 - [ ] Structured agent outputs.
 - [ ] Controlled tool execution.
 - [ ] Provider abstraction.
@@ -1392,7 +567,7 @@ The project is ready to present when it satisfies these requirements.
 - [ ] Evaluation scenarios.
 - [ ] Cost and latency tracking.
 
-## Security and reliability
+**Security and reliability**
 - [ ] Authentication.
 - [ ] Authorization.
 - [ ] User data isolation.
@@ -1402,70 +577,29 @@ The project is ready to present when it satisfies these requirements.
 - [ ] Security testing.
 - [ ] Failure recovery tests.
 
-## Product and deployment
-- [ ] Polished interactive dashboard.
+**Product and deployment**
+- [ ] Interactive dashboard.
 - [ ] Live execution updates.
 - [ ] Workflow visualization.
 - [ ] Execution inspector.
 - [ ] Dockerized application.
-- [ ] Automated CI.
+- [x] Automated CI.
 - [ ] Public deployment.
 - [ ] Demo workflow.
 - [ ] Documentation.
 - [ ] Video walkthrough.
 
----
+## What the finished project must be able to explain
+1. How the problem was identified and turned into requirements.
+2. How the database and application architecture were designed.
+3. How asynchronous processing and concurrency work.
+4. How failure recovery works, and what is and is not guaranteed.
+5. How agents and tools are integrated and constrained.
+6. How execution is made secure and observable.
+7. How the system is tested under normal and abnormal conditions.
+8. How it is deployed and operated.
+9. What would change to support substantially more load.
 
-# 9. What to prioritize if the project grows too large
-
-The most important thing is to avoid building a platform that is 70% complete but never becomes a usable product.
-
-Use these priorities:
-
-**P0 — Essential**
-- Complete incident investigation workflow.
-- Persistent backend state.
-- Task scheduling and dependencies.
-- AI agent execution.
-- Basic retries and recovery.
-- Execution history.
-- Working frontend.
-- Automated tests.
-- Deployment.
-
-**P1 — Major differentiators**
-- Concurrent workers.
-- Worker recovery.
-- Checkpointing.
-- Idempotency.
-- Human approval.
-- Tool permissions.
-- Detailed traces.
-- Evaluation framework.
-
-**P2 — Additional polish**
-- Advanced analytics.
-- Model comparisons.
-- Performance benchmarks.
-- Workflow templates.
-- Advanced workflow editor.
-- More sophisticated resource scheduling.
-
-Do not start P2 while P0 is unfinished.
-
----
-
-# 10. Project goals
-
-AgentFleet should demonstrate that a complex software problem can be taken from concept to production, with the reasoning documented along the way. The project should be explainable and defensible on:
-
-1. How the underlying problem was identified.
-2. How it was translated into product requirements.
-3. How the database and application architecture were designed.
-4. How asynchronous processing was implemented.
-5. How concurrency and failure recovery are handled.
-6. How AI agents and external tools are integrated.
-7. How execution is made secure and observable.
-8. How the system is tested under normal and abnormal conditions.
-9. How the application is deployed and monitored.
-10. What would change to support substantially more users and workloads.
+## Plan history
+- **2026-11:** restructured from the original eleven-phase plan. Phases were reordered, the early phases
+  were given step checklists, and scope priorities were revised. See [ADR-0007](decisions/0007-roadmap-restructure.md).
