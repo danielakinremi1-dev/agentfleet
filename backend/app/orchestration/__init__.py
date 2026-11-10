@@ -1,1 +1,1 @@
-"""Scheduler, dependency resolution and workflow state machine (slice 2)."""
+"""Scheduler, dependency resolution and workflow state machine (Phases 1-2)."""

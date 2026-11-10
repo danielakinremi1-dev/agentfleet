@@ -19,4 +19,5 @@ replace the Gantt-style timeline with a workflow graph (workflows are DAGs; Reac
 (inputs, outputs, tool calls, retries, token cost), live workflow graph, evaluation results view.
 
 ## Pages (roadmap Phase 6)
-Fleet Overview, Workflow Builder, Live Operations, Execution Inspector, Approvals, Analytics.
+Runs list, run detail (live workflow graph, timeline and execution inspector) and approvals.
+The workflow builder and analytics pages are P2 ([ADR-0007](../decisions/0007-roadmap-restructure.md)).

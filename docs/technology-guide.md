@@ -71,7 +71,7 @@ Entries are added as technologies are introduced. Status is `planned` until a sl
   JSONB for flexible structured payloads. See ADR-0001.
 - **Alternatives:** Redis-only state (fast, but weak durability and history); an external workflow engine.
 - **Where used:** all persistent state, the job queue, events. PostgreSQL 17 in Compose and CI.
-- **Trade-offs:** polling-based job claiming is simpler than a broker but needs tuning under load (Phase 8).
+- **Trade-offs:** polling-based job claiming is simpler than a broker but needs tuning under load (Phase 9).
 - **Status:** in use (slice 1)
 
 ## asyncio
@@ -80,7 +80,7 @@ Entries are added as technologies are introduced. Status is `planned` until a sl
   runs many such tasks cheaply in one process.
 - **Alternatives:** threads (heavier, race-prone); multiprocessing (needed only for CPU-bound work).
 - **Trade-offs:** CPU-bound or blocking calls stall the event loop, so they are kept out of async paths.
-- **Status:** in use by the API (slice 1); workers from slice 2
+- **Status:** in use by the API (slice 1); workers from Phase 2
 
 ## pytest and HTTPX
 - **What:** test runner and an async HTTP client.
@@ -111,7 +111,7 @@ Entries are added as technologies are introduced. Status is `planned` until a sl
   `backend` job is a required status check on `main` (ADR-0006).
 - **Trade-offs:** tied to GitHub. The steps are Makefile targets, so moving to another CI system means
   rewriting the wrapper, not the checks.
-- **Status:** in use (slice 1; expanded in Phase 9)
+- **Status:** in use (slice 1; Makefile targets and coverage gate in slice 2; image builds from Phase 2)
 
 ## pydantic-settings
 - **What:** loads typed configuration from environment variables and `.env` files into a Pydantic model.
@@ -126,7 +126,7 @@ Entries are added as technologies are introduced. Status is `planned` until a sl
 - **What:** the ASGI server that runs the FastAPI application.
 - **Why chosen:** the standard production-grade server for FastAPI, with auto-reload for development.
 - **Alternatives:** Hypercorn (HTTP/2 and HTTP/3 support, less common); Gunicorn with Uvicorn workers (process
-  management, revisited at deployment in Phase 9).
+  management, revisited at deployment in Phase 7).
 - **Where used:** `uv run uvicorn app.main:app`.
 - **Status:** in use (slice 1)
 

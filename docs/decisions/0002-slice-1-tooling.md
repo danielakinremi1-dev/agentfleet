@@ -9,7 +9,7 @@ The project needs a foundation that supports async API and worker code and produ
 1. **`uv`** for dependency management and lockfile.
 2. **Async SQLAlchemy 2.0 with `asyncpg`**, because the API and workers both run on asyncio.
 3. **PostgreSQL in Docker Compose.** The API runs locally during development for fast reload; the worker
-   joins Compose in slice 2.
+   joins Compose in Phase 2.
 4. **`ruff`, `mypy` and `pytest`** from the first commit. Tests run against a real PostgreSQL.
 
 ## Alternatives considered

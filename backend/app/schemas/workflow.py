@@ -22,7 +22,7 @@ class WorkflowDefinition(BaseModel):
     """The task graph of a template.
 
     Validates structure only: unique keys and dependencies that point at known tasks.
-    Cycle detection belongs with the scheduler (slice 2).
+    Cycle detection is added with the dependency graph module (Phase 1).
     """
 
     model_config = ConfigDict(extra="forbid")

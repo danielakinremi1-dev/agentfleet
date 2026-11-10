@@ -1,5 +1,5 @@
 # Local development services. The API runs on the host for fast reload (ADR-0002);
-# the worker joins this file in slice 2.
+# the API and worker images join this file in Phase 2.
 services:
   db:
     image: postgres:17

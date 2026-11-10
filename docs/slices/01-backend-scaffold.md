@@ -97,10 +97,10 @@ rewritten by hand to declare CHECK constraints explicitly with convention-based 
 No failure-injection tests yet: this slice has no durability features (claiming, leases, retries).
 
 ## Follow-ups
-- Cycle detection for template definitions (with the scheduler, slice 2).
+- Cycle detection for template definitions (Phase 1).
 - Run creation (`POST /api/workflows/{id}/runs`, `GET /api/runs/{id}`), the `task_dependencies` table and task
-  and run state-transition rules (slice 2).
-- Remaining Phase 1 entities: `User`, `Agent` and their endpoints.
+  and run state-transition rules (Phase 1).
+- `Agent` and `User` entities, created when agents (Phase 4) and authentication (Phase 5) need them.
 - Structured (JSON) logging and request IDs.
 - Offset pagination degrades on large tables; switch to keyset (cursor) pagination when lists grow.
 - UUIDv7 keys for index locality once on Python 3.14, or via a library.

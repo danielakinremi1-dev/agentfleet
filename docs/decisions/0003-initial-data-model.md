@@ -27,7 +27,7 @@ change once data exists.
 7. **Constraint naming convention** on the metadata (`pk_`, `uq_`, `fk_`, `ck_`, `ix_`), so migrations and
    error handling can refer to constraints by stable names.
 
-Deferred: the run-level `task_dependencies` table and state-transition rules (slice 2), and lease and
+Deferred: the run-level `task_dependencies` table and state-transition rules (Phase 1), and lease and
 retry columns (Phase 3).
 
 ## Alternatives considered

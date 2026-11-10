@@ -19,4 +19,4 @@ caching and is never the only copy of execution state.
 ## Consequences
 - Durable, queryable history and transactional consistency between state changes and events.
 - More coordination logic to implement: claiming, leases, heartbeats, idempotency.
-- Polling-based claiming needs benchmarking under load (Phase 8).
+- Polling-based claiming needs benchmarking under load (Phase 9).
