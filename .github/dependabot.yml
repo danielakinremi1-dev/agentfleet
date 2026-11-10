@@ -1,0 +1,23 @@
+# Monthly, grouped dependency update PRs. Each PR runs the full CI pipeline, so an update
+# that breaks lint, types, migrations or tests cannot be merged.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/backend"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "build"
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns: ["*"]
