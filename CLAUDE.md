@@ -13,6 +13,8 @@ to the task. If a `CLAUDE.local.md` exists, follow it as well.
 ## Development process
 1. **Work in small slices** (about 2-4 hours each). Branch per slice: `slice/<n>-<name>`.
    Each slice ends with a pull request. Do not merge to `main`; the owner reviews and merges.
+   `main` is protected: it only changes through a PR with the `backend` CI check passing.
+   One commit per roadmap step. The full workflow is in `CONTRIBUTING.md`.
 2. **Decide, build, then ask.** Make reasonable default decisions guided by the architecture
    principles below and keep moving; do not stop mid-slice to wait for approval. Record each
    decision as it is made. At the end of the slice, list the uncertain choices (default chosen
@@ -48,9 +50,10 @@ The docs are a step-by-step record of how the system was built and why.
   context if present, but never commit or quote them in public docs.
 
 ## Every slice ends with
-- Tests, `ruff` and `mypy` passing locally; CI passing on the PR.
+- `make check` passing locally; CI passing on the PR.
 - Docs updated as above, including the roadmap Progress table.
-- A PR with a short summary of what was built and why, plus open questions from rule 2.
+- A PR that follows `.github/pull_request_template.md`: summary, how to verify, checklist, and
+  open questions from rule 2. `CHANGELOG.md` updated under `Unreleased`.
 
 ## Architecture principles
 1. API layer is separate from execution logic.
@@ -82,14 +85,15 @@ TypeScript, Tailwind, React Flow. Rationale: `docs/technology-guide.md` and
   or part of the environment setup script.
 
 ## Commands
-First time: `cp .env.example .env`. Backend commands run from `backend/`.
-- Start PostgreSQL: `docker compose up -d db` (host port 5433 by default)
-- Install: `uv sync`
-- Run: `uv run alembic upgrade head && uv run uvicorn app.main:app --reload` (OpenAPI docs at `/docs`)
-- Test: `uv run pytest` (needs the database running; creates `agentfleet_test` on first run)
-- Lint / format / type-check: `uv run ruff check . && uv run ruff format --check . && uv run mypy`
-- Migrate: `uv run alembic upgrade head`; new migration: `uv run alembic revision --autogenerate -m "<message>"`
-  (review the generated file by hand); drift check: `uv run alembic check`
+All commands are Makefile targets run from the repository root (`make help` lists them).
+- First time: `make setup` (creates `.env`, installs locked dependencies)
+- Start PostgreSQL: `make up` (host port 5433 by default); stop: `make down`
+- Run: `make run` (applies migrations, then serves the API with reload; OpenAPI docs at `/docs`)
+- Test: `make test` (pass pytest options with `args="-k name"`); with the coverage gate: `make coverage`
+- Lint / format / type-check: `make lint`, `make format`, `make typecheck`
+- Migrate: `make migrate`; new migration: `make migration m="<message>"` (review the generated file
+  by hand); drift check: `make migration-check`
+- Everything CI runs: `make check`. Run it before every push.
 
 ## Security non-negotiables
 - Never give an LLM-controlled agent an unrestricted shell, arbitrary Python execution, or
