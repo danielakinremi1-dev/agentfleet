@@ -9,9 +9,19 @@ Each completed roadmap phase is a release (see [CONTRIBUTING.md](CONTRIBUTING.md
 - MIT license.
 - Dependency graph validation: cyclic workflow templates are rejected with a `422` that names the cycle.
 - Design doc 0001 (run lifecycle) and ADR-0008 (dependency graph validation).
+- Workflow runs: `POST /api/workflows/{id}/runs` creates a run with one task per template task and its
+  dependencies, atomically; `GET /api/runs/{id}` returns the run with its task graph; `GET /api/runs`
+  lists runs.
+- Migration `0002`: the `task_dependencies` table and `tasks.position`.
+- ADR-0009 (run materialization).
 
 ### Changed
 - A task that lists the same dependency more than once is now rejected (`422`).
+- Validation error responses (`422`) no longer include the rejected value (`input`).
+
+### Fixed
+- A request body containing `NaN` returned `500` instead of `422`.
+- A NUL character in a template name, description or task name returned `500` instead of `422`.
 
 ## [0.1.0] - 2026-11-10
 

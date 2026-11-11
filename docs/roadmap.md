@@ -19,7 +19,7 @@ suite run against a real database. Workflows cannot be executed yet; that work s
 | Phase | Focus | Release | Status |
 |---|---|---|---|
 | 0 | Foundation | v0.1.0 | Done |
-| 1 | Workflow core: runs and state machines | v0.2.0 | In progress (1 of 4 slices) |
+| 1 | Workflow core: runs and state machines | v0.2.0 | In progress (2 of 4 slices) |
 | 2 | Execution engine | v0.3.0 | Not started |
 | 3 | Durable execution | v0.4.0 | Not started |
 | 4 | Agents and tools | v0.5.0 | Not started |
@@ -156,11 +156,11 @@ The plan contains about 45 slices.
   - [x] [Design doc 0001](design-docs/0001-run-lifecycle.md): run lifecycle (run creation, task materialization, run and task state machines)
   - [x] `app/orchestration/dag.py`: cycle detection (Kahn's algorithm) returning a topological order or the tasks on a cycle; unit tests for chain, diamond, two-node cycle, long cycle and disconnected graphs
   - [x] Template validation rejects cyclic definitions with a 422 that names the cycle
-- [ ] **Run creation**
-  - [ ] Migration `0002`: `task_dependencies` (composite primary key; composite foreign keys that keep both ends in one run; no self-reference)
-  - [ ] `create_run` service: re-validates the stored definition, then inserts the run, one task per definition entry and the dependency rows in one transaction
-  - [ ] `POST /api/workflows/{id}/runs`, `GET /api/runs/{id}` (run with tasks and dependencies), `GET /api/runs`
-  - [ ] Tests: the materialized graph matches the definition; a failure part-way leaves no rows; unknown template is 404; an invalid stored definition is 409
+- [x] **Run creation** ([slice note](slices/05-run-creation.md), PR #7)
+  - [x] Migration `0002`: `task_dependencies` (composite primary key; composite foreign keys that keep both ends in one run; no self-reference) and `tasks.position`
+  - [x] `create_run` service: re-validates the stored definition, then inserts the run, one task per definition entry and the dependency rows in one transaction
+  - [x] `POST /api/workflows/{id}/runs`, `GET /api/runs/{id}` (run with tasks and dependencies), `GET /api/runs`
+  - [x] Tests: the materialized graph matches the definition; a failure part-way leaves no rows; unknown template is 404; an invalid stored definition is 409
 - [ ] **State machines**
   - [ ] Migration `0003`: `cancelled` added to the task status constraint
   - [ ] Allowed transitions for runs and tasks declared as data, in one module
@@ -174,7 +174,7 @@ The plan contains about 45 slices.
   - [ ] Keyset pagination on list endpoints, replacing offset pagination
 
 **Exit criteria**
-- [ ] A run created from a template can be read back with its tasks and dependencies.
+- [x] A run created from a template can be read back with its tasks and dependencies.
 - [x] No cyclic template can be stored.
 - [ ] Every invalid state transition is rejected, and the transition table is tested exhaustively.
 - [ ] All error responses share one documented format, and every log line carries a request ID.

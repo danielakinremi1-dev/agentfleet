@@ -21,7 +21,8 @@ Phase 0 is complete and released as `v0.1.0`. Phase 1 (workflow runs and state m
 | Capability | Status |
 |---|---|
 | Workflow templates API with validated, cycle-free task graphs | Built |
-| Runs, task dependencies and enforced state machines | Phase 1 (in progress) |
+| Runs created atomically from a template, with task dependencies as rows | Built |
+| Enforced run and task state machines | Phase 1 (in progress) |
 | Workers executing tasks with safe concurrent claiming | Phase 2 |
 | Crash recovery, retries and idempotency | Phase 3 |
 | LLM agents with allowlisted tools; incident investigation workflow | Phase 4 |

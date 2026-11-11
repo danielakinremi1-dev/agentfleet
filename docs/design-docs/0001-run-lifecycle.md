@@ -3,7 +3,8 @@
 Status: accepted
 Phase: 1    Related ADRs: [0003](../decisions/0003-initial-data-model.md),
 [0004](../decisions/0004-session-and-transaction-boundaries.md),
-[0008](../decisions/0008-dependency-graph-validation.md)
+[0008](../decisions/0008-dependency-graph-validation.md),
+[0009](../decisions/0009-run-materialization.md)
 
 Covers dependency graph validation, run creation and the run and task state machines.
 Execution (scheduling, claiming, workers) is designed in 0002.
@@ -113,6 +114,10 @@ erDiagram
 The database cannot express "this set of edges has no cycle". That is guaranteed by validating before
 insert and by never updating edges afterwards.
 
+**`tasks.position`** (migration `0002`) is the task's index in the template definition, unique within a
+run. All rows of a run are inserted in one transaction and share one `created_at`, so this is the only
+stable order tasks have. Added during implementation ([ADR-0009](../decisions/0009-run-materialization.md)).
+
 **`tasks.status`** gains `cancelled` (migration `0003`, with the state machines). It is the terminal state
 of a task that will never run: its run was cancelled, or a task it depends on failed permanently.
 Without it, such tasks would stay `pending` forever and a finished run would look unfinished.
@@ -128,7 +133,7 @@ sequenceDiagram
     participant D as PostgreSQL
 
     C->>S: template_id, input
-    S->>D: SELECT template
+    S->>D: SELECT template FOR KEY SHARE
     Note over S: Validate the stored definition, cycle check included
     Note over S: Generate run ID and one ID per task, map dependency keys to IDs
     S->>D: INSERT run (pending)
@@ -139,16 +144,20 @@ sequenceDiagram
 ```
 
 - **One transaction.** The three inserts commit together (ADR-0004). A failure at any point leaves no rows.
+- **The template is locked against deletion.** It is read `FOR KEY SHARE`, the lock the foreign key check
+  takes on insert, so it cannot be deleted between the read and the insert of the run that references it.
+  The lock does not block other readers or other run creations.
 - **IDs are generated in the application** (ADR-0003), so dependency rows can be built from the
   key-to-ID map without reading the inserted tasks back.
 - **The run is a snapshot.** Each task row copies its key and name from the definition. The run keeps
   `template_id` for provenance but never reads the template again.
 - **Everything starts `pending`.** Run creation does not queue anything. Deciding which tasks are ready is
   the scheduler's responsibility (design 0002), so that rule lives in exactly one place.
-- **Input is bounded.** `input` must be a JSON object within a size limit, like every other request body.
+- **Input is bounded.** `input` must be a JSON object of at most 64 KiB, and may not contain values
+  that `jsonb` cannot store (NaN, Infinity, the NUL character).
 
-Read paths: `GET /api/runs/{id}` returns the run with its tasks and each task's dependency keys;
-`GET /api/runs` lists runs.
+Read paths: `GET /api/runs/{id}` returns the run with its tasks in definition order and each task's
+dependency keys; `GET /api/runs` lists runs.
 
 ### 4. State machines
 
@@ -247,7 +256,7 @@ table in this document, the code and the exhaustive test are the same list.
 | Two processes request the same transition at once | One update matches the row; the other matches nothing and raises `StaleStateError` | Exactly one transition is applied |
 | A caller requests a transition that is not in the table | `InvalidTransitionError` before any SQL | Illegal transitions cannot be requested through the service |
 | The stored definition of a template is cyclic or otherwise invalid (stored before validation existed, or changed by hand) | Run creation re-validates and refuses with `409` | A run is never created from an invalid graph |
-| A template is deleted while a run is being created from it | Whichever commits first wins: the delete is blocked by `ON DELETE RESTRICT`, or the run insert fails its foreign key and the request returns `404` | No run references a missing template |
+| A template is deleted while a run is being created from it | Run creation holds a `FOR KEY SHARE` lock on the template row, so the delete waits for it to commit and is then refused by `ON DELETE RESTRICT`. A delete that commits first makes the template not found (`404`) | No run references a missing template |
 | An edge is written between tasks of different runs | Rejected by the composite foreign keys | Dependencies stay within a run |
 | A status is changed with raw SQL, skipping the transition function | The CHECK constraint still rejects unknown values, but an illegal transition between valid values is not detected | Not guaranteed; all writers must use the transition function (see alternatives) |
 
@@ -283,12 +292,13 @@ table in this document, the code and the exhaustive test are the same list.
 
 ## Rollout
 1. Dependency graph validation (this slice): code only, no migration.
-2. Run creation: migration `0002` adds `task_dependencies` and the unique constraint on `tasks (run_id, id)`.
+2. Run creation: migration `0002` adds `task_dependencies`, `tasks.position` and the unique constraints
+   on `tasks (run_id, id)` and `tasks (run_id, position)`. Existing tasks are numbered by the migration.
 3. State machines: migration `0003` replaces the task status CHECK constraint to add `cancelled`.
 
-No backfill is needed: no environment holds production data.
+No environment holds production data. Migration `0002` still numbers existing tasks, so it applies to a
+development database that already contains some.
 
 ## Open questions
-1. Status code when a stored template is invalid at run creation: `409` is proposed, since the request is
-   well-formed and conflicts with the state of the resource.
-2. The size limit for run `input` (64 KiB is proposed), settled in the run creation slice.
+None open. Resolved in [ADR-0009](../decisions/0009-run-materialization.md): an invalid stored definition
+is refused with `409`, and run `input` is limited to 64 KiB.
