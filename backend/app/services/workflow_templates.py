@@ -39,8 +39,19 @@ async def create_template(session: AsyncSession, data: WorkflowTemplateCreate) -
     return template
 
 
-async def get_template(session: AsyncSession, template_id: uuid.UUID) -> WorkflowTemplate | None:
-    return await session.get(WorkflowTemplate, template_id)
+async def get_template(
+    session: AsyncSession, template_id: uuid.UUID, *, block_delete: bool = False
+) -> WorkflowTemplate | None:
+    """Load a template.
+
+    With `block_delete`, the row is read `FOR KEY SHARE`: until the caller's transaction ends,
+    another transaction can still read the template and create runs from it, but cannot delete
+    it. Run creation uses this so the template cannot disappear between being read and the run
+    row that references it being inserted. It is the same lock the foreign key check takes on
+    insert, taken one statement earlier.
+    """
+    lock = {"read": True, "key_share": True} if block_delete else None
+    return await session.get(WorkflowTemplate, template_id, with_for_update=lock)
 
 
 async def list_templates(
