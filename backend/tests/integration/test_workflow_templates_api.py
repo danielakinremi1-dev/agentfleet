@@ -121,3 +121,34 @@ async def test_list_rejects_out_of_range_paging(
 ) -> None:
     response = await client.get("/api/workflows", params=params)
     assert response.status_code == 422
+
+
+async def test_validation_errors_describe_the_problem_without_echoing_the_request(
+    client: AsyncClient,
+) -> None:
+    payload = template_payload()
+    payload["description"] = "x" * 5000
+
+    response = await client.post("/api/workflows", json=payload)
+
+    assert response.status_code == 422
+    (error,) = response.json()["detail"]
+    assert error["loc"] == ["body", "description"]
+    assert "at most 2000 characters" in error["msg"]
+    assert "input" not in error
+    assert "x" * 100 not in response.text
+
+
+async def test_request_containing_nan_is_a_validation_error_not_a_server_error(
+    client: AsyncClient,
+) -> None:
+    # NaN is not valid JSON, but Python's parser accepts it. Repeating it in the error response
+    # is impossible, which used to turn this 422 into a 500.
+    response = await client.post(
+        "/api/workflows",
+        content='{"name": NaN, "definition": {"tasks": [{"key": "a", "name": "A"}]}}',
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "name"]
