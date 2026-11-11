@@ -2,12 +2,27 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 from app.orchestration.dag import topological_order
+from app.schemas.storable import reject_nul
 
 # Task keys are referenced by `depends_on` and later by task rows, so keep them simple identifiers.
 TaskKey = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$", max_length=100)]
+
+# Display names of templates and tasks.
+Name = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=200),
+    AfterValidator(reject_nul),
+]
 
 MAX_TASKS_PER_TEMPLATE = 100
 
@@ -16,7 +31,7 @@ class TaskDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     key: TaskKey
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    name: Name
     depends_on: list[TaskKey] = Field(default_factory=list, max_length=MAX_TASKS_PER_TEMPLATE)
 
 
@@ -58,8 +73,8 @@ class WorkflowDefinition(BaseModel):
 class WorkflowTemplateCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
-    description: Annotated[str, StringConstraints(max_length=2000)] = ""
+    name: Name
+    description: Annotated[str, StringConstraints(max_length=2000), AfterValidator(reject_nul)] = ""
     definition: WorkflowDefinition
 
 

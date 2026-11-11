@@ -19,3 +19,10 @@ def contains_nul(value: object) -> bool:
     if isinstance(value, list):
         return any(contains_nul(item) for item in value)
     return False
+
+
+def reject_nul(value: str) -> str:
+    """Validator for text destined for a PostgreSQL `text` or `varchar` column."""
+    if NUL in value:
+        raise ValueError("must not contain the NUL character (\\u0000)")
+    return value

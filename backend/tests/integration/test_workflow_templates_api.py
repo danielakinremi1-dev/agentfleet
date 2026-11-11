@@ -152,3 +152,20 @@ async def test_request_containing_nan_is_a_validation_error_not_a_server_error(
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "name"]
+
+
+@pytest.mark.parametrize("field", ["name", "description", "task name"])
+async def test_nul_character_in_text_is_a_validation_error(client: AsyncClient, field: str) -> None:
+    # JSON allows \u0000 in a string, but PostgreSQL cannot store it in a text column. Without
+    # this check the insert fails inside the database and the client gets a 500.
+    payload = template_payload()
+    if field == "task name":
+        payload["definition"]["tasks"][0]["name"] = "Gather\x00evidence"
+    else:
+        payload[field] = "before\x00after"
+
+    response = await client.post("/api/workflows", json=payload)
+
+    assert response.status_code == 422
+    assert "NUL" in response.json()["detail"][0]["msg"]
+    assert (await client.get("/api/workflows")).json() == []
