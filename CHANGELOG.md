@@ -7,6 +7,11 @@ Each completed roadmap phase is a release (see [CONTRIBUTING.md](CONTRIBUTING.md
 
 ### Added
 - MIT license.
+- Dependency graph validation: cyclic workflow templates are rejected with a `422` that names the cycle.
+- Design doc 0001 (run lifecycle) and ADR-0008 (dependency graph validation).
+
+### Changed
+- A task that lists the same dependency more than once is now rejected (`422`).
 
 ## [0.1.0] - 2026-11-10
 

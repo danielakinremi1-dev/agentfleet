@@ -16,12 +16,12 @@ AgentFleet is a backend orchestration system built around those problems.
 4. **Evaluation:** replay standardized incidents and measure whether agents find the correct cause.
 
 ## Status
-Phase 0 of 10 is complete. Next: Phase 1, workflow runs and state machines.
+Phase 0 is complete and released as `v0.1.0`. Phase 1 (workflow runs and state machines) is in progress.
 
 | Capability | Status |
 |---|---|
-| Workflow templates API with validated task graphs | Built |
-| Runs, task dependencies and enforced state machines | Phase 1 (next) |
+| Workflow templates API with validated, cycle-free task graphs | Built |
+| Runs, task dependencies and enforced state machines | Phase 1 (in progress) |
 | Workers executing tasks with safe concurrent claiming | Phase 2 |
 | Crash recovery, retries and idempotency | Phase 3 |
 | LLM agents with allowlisted tools; incident investigation workflow | Phase 4 |

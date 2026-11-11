@@ -37,3 +37,5 @@ Known limitations, deferred refactors, and next steps.
    PR template, changelog, Dependabot.
 3. [Roadmap restructure](03-roadmap-restructure.md): phased plan with exit criteria, architecture
    overview, design-doc process.
+4. [Dependency graph validation](04-dependency-graph-validation.md): design doc 0001, topological
+   ordering with cycle detection, cyclic templates rejected.

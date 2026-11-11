@@ -33,10 +33,27 @@ def test_valid_dag_is_accepted() -> None:
         ([task("a"), task("a")], "duplicate task keys: a"),
         ([task("a", "missing")], "depends on unknown tasks: missing"),
         ([task("a", "a")], "depends on itself"),
+        ([task("a"), task("b", "a", "a")], "lists the same dependency more than once"),
+        ([task("a", "b"), task("b", "a")], "dependency cycle: a -> b -> a"),
+        (
+            # "report" is blocked by the cycle but is not on it, so it must not be named.
+            [task("report", "c"), task("a", "c"), task("b", "a"), task("c", "b")],
+            "dependency cycle: c -> b -> a -> c",
+        ),
         ([task("Bad-Key")], "should match pattern"),
         ([task(f"t{i}") for i in range(MAX_TASKS_PER_TEMPLATE + 1)], "at most 100 items"),
     ],
-    ids=["empty", "duplicate-key", "unknown-dependency", "self-dependency", "bad-key", "too-many"],
+    ids=[
+        "empty",
+        "duplicate-key",
+        "unknown-dependency",
+        "self-dependency",
+        "repeated-dependency",
+        "two-task-cycle",
+        "cycle-with-downstream-task",
+        "bad-key",
+        "too-many",
+    ],
 )
 def test_invalid_definitions_are_rejected(tasks: list[dict[str, Any]], message: str) -> None:
     with pytest.raises(ValidationError, match=message):

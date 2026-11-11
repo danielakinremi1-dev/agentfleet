@@ -52,7 +52,7 @@ flowchart TD
 | Services | `app/services` | Business rules and transaction boundaries | Import FastAPI |
 | Models | `app/models` | Tables, columns and constraints (SQLAlchemy) | Contain behaviour |
 | Core | `app/core` | Settings, engine and session factories | Depend on other app packages |
-| Orchestration | `app/orchestration` | Dependency graphs, state machines, scheduling (planned) | Know about HTTP |
+| Orchestration | `app/orchestration` | Dependency graphs (built); state machines and scheduling (planned) | Know about HTTP |
 | Workers | `app/workers` | Claim and execute tasks (planned) | Bypass services to change state |
 
 Dependencies point downward only. Services have no web framework imports so that workers can call the
@@ -148,6 +148,7 @@ Each guarantee is enforced at the lowest layer that can enforce it and is proven
 | A success response means the data is committed | Services commit before returning | `test_create_then_read_template` (reads through a second session) |
 | A unit of work is all or nothing | One transaction per unit of work | `test_failed_commit_persists_nothing` |
 | Only known statuses can be stored | CHECK constraints | `test_database_rejects_unknown_status` |
+| A template's dependencies can always be satisfied (no cycles) | Kahn's algorithm in template validation ([ADR-0008](../decisions/0008-dependency-graph-validation.md)) | `test_cyclic_template_is_rejected_and_names_the_cycle`, `tests/unit/test_dag.py` |
 | A run cannot contain the same task twice | Unique constraint on `(run_id, key)` | `test_task_keys_are_unique_within_a_run` |
 | Execution history cannot be orphaned or silently deleted | Foreign keys with RESTRICT and CASCADE | `test_template_with_runs_cannot_be_deleted`, `test_deleting_a_run_deletes_its_tasks` |
 | The schema matches the models | `alembic check` in tests and CI | `test_models_match_migrations` |
@@ -168,8 +169,8 @@ Each guarantee is enforced at the lowest layer that can enforce it and is proven
 The parts below are not built. They are summarized here so the direction is visible; each gets a design
 doc before implementation.
 
-1. **Run creation (Phase 1).** A template is materialized into a run, its tasks and their dependency
-   rows in one transaction. Run and task states change only through a transition function that uses
+1. **Run creation (Phase 1, [design doc 0001](../design-docs/0001-run-lifecycle.md)).** A template is
+   materialized into a run, its tasks and their dependency rows in one transaction. Run and task states change only through a transition function that uses
    compare-and-set, so an invalid or concurrent transition changes nothing.
 2. **Scheduling and claiming (Phase 2).** A task becomes `queued` when all of its dependencies are
    completed. Workers claim queued tasks with row locks that skip rows another worker holds.
