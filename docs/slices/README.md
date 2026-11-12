@@ -39,3 +39,5 @@ Known limitations, deferred refactors, and next steps.
    overview, design-doc process.
 4. [Dependency graph validation](04-dependency-graph-validation.md): design doc 0001, topological
    ordering with cycle detection, cyclic templates rejected.
+5. [Run creation](05-run-creation.md): `task_dependencies`, atomic materialization of a template into
+   a run, run endpoints, failure-injection tests.

@@ -23,7 +23,7 @@ authentication and authorization, event delivery. Routine endpoints and refactor
 
 | # | Subsystem | Phase | Status |
 |---|---|---|---|
-| [0001](0001-run-lifecycle.md) | Run lifecycle: dependency graph validation, run creation, run and task state machines | 1 | Accepted; graph validation implemented |
+| [0001](0001-run-lifecycle.md) | Run lifecycle: dependency graph validation, run creation, run and task state machines | 1 | Accepted; graph validation and run creation implemented |
 | 0002 | Scheduling and job claiming | 2 | Planned |
 | 0003 | Leases, retries and idempotency (failure model) | 3 | Planned |
 | 0004 | Agent execution and the tool sandbox | 4 | Planned |

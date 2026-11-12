@@ -3,7 +3,17 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -85,13 +95,23 @@ class Task(TimestampMixin, Base):
     """One step of a run. Its own row, because workers lock and update tasks individually."""
 
     __tablename__ = "tasks"
-    __table_args__ = (UniqueConstraint("run_id", "key"),)
+    __table_args__ = (
+        UniqueConstraint("run_id", "key"),
+        UniqueConstraint("run_id", "position"),
+        # `id` is already unique on its own. This constraint exists so that task_dependencies
+        # can reference the pair (run_id, id), which a foreign key may only do if the pair is
+        # declared unique.
+        UniqueConstraint("run_id", "id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     # CASCADE: tasks have no meaning without their run.
     run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workflow_runs.id", ondelete="CASCADE"))
     key: Mapped[str] = mapped_column(String(100))
     name: Mapped[str] = mapped_column(String(200))
+    # Index of the task in the template definition. All tasks of a run are inserted in one
+    # transaction and share one created_at, so this is the only stable ordering they have.
+    position: Mapped[int]
     status: Mapped[TaskStatus] = mapped_column(
         _status_column_type(TaskStatus, "task_status"),
         default=TaskStatus.PENDING,
@@ -106,3 +126,37 @@ class Task(TimestampMixin, Base):
     attempt_count: Mapped[int] = mapped_column(default=0, server_default=text("0"))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class TaskDependency(Base):
+    """An edge of a run's task graph: `task_id` may not start until `depends_on_task_id` completes.
+
+    Rows are written once, when the run is created, and never updated.
+    """
+
+    __tablename__ = "task_dependencies"
+    __table_args__ = (
+        # Both foreign keys include run_id, and a row has only one run_id, so both ends of an
+        # edge are forced to belong to the same run. Two single-column keys to tasks.id would
+        # allow an edge between tasks of different runs.
+        ForeignKeyConstraint(
+            ["run_id", "task_id"],
+            ["tasks.run_id", "tasks.id"],
+            name="fk_task_dependencies_task_id_tasks",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["run_id", "depends_on_task_id"],
+            ["tasks.run_id", "tasks.id"],
+            name="fk_task_dependencies_depends_on_task_id_tasks",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("task_id <> depends_on_task_id", name="no_self_dependency"),
+    )
+
+    run_id: Mapped[uuid.UUID]
+    # The primary key (task_id, depends_on_task_id) stores each edge at most once and serves
+    # "what does this task wait for". The separate index on depends_on_task_id serves the
+    # opposite question, "which tasks wait for this one", asked whenever a task completes.
+    task_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    depends_on_task_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True)
